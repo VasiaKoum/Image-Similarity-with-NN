@@ -6,6 +6,7 @@ import numpy as np
 from keras.models import Model
 from keras.optimizers import RMSprop
 import matplotlib.pyplot as plt
+from tensorflow.python.keras import backend as K
 from functions import *
 
 # Autoencoder hyperparameters -> number of layers, filter size, number of filters/layer, number of epochs, batch size
@@ -33,12 +34,26 @@ def main():
     while (True):
         print("\nBegin building model...")
         input_img = Input(shape=(numarray[2], numarray[3], 1))
-        autoencoder = Model(input_img, decoder(encoder(input_img, parameters), parameters))
+        encoder_layer = encoder(input_img, parameters)
+        bottleneck_layer = bottleneck(encoder_layer, parameters)
+
+        autoencoder = Model(input_img, decoder(bottleneck_layer, parameters))
         autoencoder.compile(loss='mean_squared_error', optimizer=RMSprop())
+
         train_time = time.time()
         autoencoder_train = autoencoder.fit(train_X, train_Y, batch_size=parameters[4], epochs=parameters[3], verbose=1, validation_data=(valid_X, valid_Y))
         train_time = time.time() - train_time
         print(autoencoder.summary())
+
+        # layer = autoencoder.get_layer('dense_4')
+        layer_ = None
+        for layer in autoencoder.layers:
+            if layer.output_shape == (None, 10):
+                layer_ = layer
+
+        outputs = K.function([autoencoder.input], [layer_.output])([train_X, 1])
+        # outputs = [K.function([autoencoder.input], [layer.output])([training_data, 1]) for layer in autoencoder.layers]
+        print(outputs[0][0])
 
         # User choices:
         parameters, continue_flag, oldparm = user_choices(autoencoder, autoencoder_train, parameters, originparms, train_time, newparameter, oldparm, df, hypernames)

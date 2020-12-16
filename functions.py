@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from itertools import zip_longest
 from sklearn.model_selection import train_test_split
 from keras.models import Model, model_from_json
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Flatten, Dense
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Flatten, Dense, Reshape, Conv2DTranspose
 from sklearn.metrics import classification_report
 from PIL import Image
 
@@ -39,17 +39,25 @@ def encoder(input_img, parameters):
         filters*=2
     return conv
 
+def bottleneck(enc, parameters):
+    flatten_layer = Flatten()(enc)
+    embedding_layer = Dense(10, activation="relu")(flatten_layer)
+    dense_layer = Dense(flatten_layer.shape[1], activation="softmax")(embedding_layer)
+    print(enc.shape)
+    reshape_layer = Reshape((enc.shape[1], enc.shape[2], enc.shape[3]))(dense_layer)
+    return reshape_layer
+
 def decoder(conv, parameters):
     layers = parameters[0]
     filter_size = parameters[1]
     filters = parameters[2]*pow(2,parameters[0]-1)
     for i in range(layers):
-        conv = Conv2D(filters, (filter_size, filter_size), activation='relu', padding='same')(conv)
+        conv = Conv2DTranspose(filters, (filter_size, filter_size), activation='relu', padding='same')(conv)
         conv = BatchNormalization()(conv)
         if (i>=layers-2):
             conv = UpSampling2D((2,2))(conv)
         filters/=2
-    conv = Conv2D(1, (filter_size, filter_size), activation='sigmoid', padding='same')(conv)
+    conv = Conv2DTranspose(1, (3, 3), activation='sigmoid', padding='same')(conv)
     return conv
 
 def save_model(model):
