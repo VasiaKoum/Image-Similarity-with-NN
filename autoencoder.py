@@ -45,15 +45,26 @@ def main():
         train_time = time.time() - train_time
         print(autoencoder.summary())
 
-        # layer = autoencoder.get_layer('dense_4')
-        layer_ = None
-        for layer in autoencoder.layers:
-            if layer.output_shape == (None, 10):
-                layer_ = layer
+        # IN FUNCTION -> WRITE:
+        outputs = (K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10))
+        lst = list(outputs)
+        # newlst = [(i/255).astype(int) for i in lst[0][0]]
+        newlst = [(i).astype(int) for i in lst[0][0]]
+        print(newlst[0])
+        output_file = open('output', 'wb')
+        # output_file.write(len(newlst).to_bytes(2, 'big'))
+        for i in newlst:
+            for j in i:
+                output_file.write(j.item().to_bytes(2, 'big'))
+        output_file.close()
 
-        outputs = K.function([autoencoder.input], [layer_.output])([train_X, 1])
-        # outputs = [K.function([autoencoder.input], [layer.output])([training_data, 1]) for layer in autoencoder.layers]
-        print(outputs[0][0])
+        # IN FUNCTION -> READ:
+        with open('output', 'rb') as file:
+            print(int.from_bytes(file.read(2), byteorder='big'))
+            for i in range(10):
+                print(int.from_bytes(file.read(2), byteorder='big'))
+            # l = list(bytes_group(10, file.read(), fillvalue=0))
+            # print(l[0])
 
         # User choices:
         parameters, continue_flag, oldparm = user_choices(autoencoder, autoencoder_train, parameters, originparms, train_time, newparameter, oldparm, df, hypernames)
