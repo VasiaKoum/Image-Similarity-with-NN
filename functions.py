@@ -39,6 +39,20 @@ def encoder(input_img, parameters):
         filters*=2
     return conv
 
+def bottleneck_fisrt_part(enc, parameters):
+    flatten_layer = Flatten()(enc)
+    embedding_layer = Dense(10, activation="sigmoid")(flatten_layer)
+    embedding_layer = embedding_layer*25500
+    return embedding_layer
+
+def bottleneck_second_part(enc,embedding_layer, parameters):
+    flatten_layer = Flatten()(enc)
+    dense_layer = Dense(flatten_layer.shape[1], activation="softmax")(embedding_layer)
+    print(enc.shape)
+    reshape_layer = Reshape((enc.shape[1], enc.shape[2], enc.shape[3]))(dense_layer)
+    return reshape_layer
+
+
 def bottleneck(enc, parameters):
     flatten_layer = Flatten()(enc)
     embedding_layer = Dense(10, activation="relu")(flatten_layer)

@@ -35,21 +35,36 @@ def main():
         print("\nBegin building model...")
         input_img = Input(shape=(numarray[2], numarray[3], 1))
         encoder_layer = encoder(input_img, parameters)
-        bottleneck_layer = bottleneck(encoder_layer, parameters)
+        # bottleneck_layer = bottleneck(encoder_layer, parameters)
 
-        autoencoder = Model(input_img, decoder(bottleneck_layer, parameters))
+        intermediate_layer_model = Model(input_img, bottleneck_fisrt_part(encoder_layer, parameters))
+        intermediate_layer_model_output = intermediate_layer_model(input_img)
+        bottleneck_layer = bottleneck_second_part(encoder_layer,intermediate_layer_model_output, parameters)
+
+        autoencoder = Model(input_img, decoder(bottleneck_layer,parameters))
         autoencoder.compile(loss='mean_squared_error', optimizer=RMSprop())
+
+        # for layer in autoencoder.layers:
+        #     if layer.output_shape == (None, 10):
+        #         layer_name = layer.name
+        # intermediate_layer_model = Model(inputs=autoencoder.input,
+        #                                  outputs=autoencoder.get_layer(layer_name).output)
 
         train_time = time.time()
         autoencoder_train = autoencoder.fit(train_X, train_Y, batch_size=parameters[4], epochs=parameters[3], verbose=1, validation_data=(valid_X, valid_Y))
         train_time = time.time() - train_time
         print(autoencoder.summary())
 
+        # outputs = intermediate_layer_model(train_X)
+        print(intermediate_layer_model(train_X))
+        print(intermediate_layer_model(train_X).shape)
+        outputs = intermediate_layer_model(train_X)
         # IN FUNCTION -> WRITE:
-        outputs = (K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10))
-        lst = list(outputs)
+        # outputs = (K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10))
+        lst = list(outputs.numpy())
+        print(len(lst),len(lst[0]))
         # newlst = [(i/255).astype(int) for i in lst[0][0]]
-        newlst = [(i).astype(int) for i in lst[0][0]]
+        newlst = [(i).astype(int) for i in lst[0]]
         print(newlst[0])
         output_file = open('output', 'wb')
         # output_file.write(len(newlst).to_bytes(2, 'big'))
