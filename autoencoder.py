@@ -1,4 +1,4 @@
-# python autoencoder.py -d ./Datasets/train-images-idx3-ubyte
+# python autoencoder.py -d ./Datasets/train-images-idx3-ubyte -q ./Datasets/t10k-images-idx3-ubyte -od outdata -oq outquery
 import sys
 import time
 import struct
@@ -11,12 +11,16 @@ from functions import *
 
 # Autoencoder hyperparameters -> number of layers, filter size, number of filters/layer, number of epochs, batch size
 def main():
-    if (len(sys.argv) != 3):
+    if (len(sys.argv) != 9):
         sys.exit("Wrong or missing parameter. Please execute with: -d dataset")
-    if (sys.argv[1] != "-d"):
-        sys.exit("Wrong or missing parameter. Please execute with: -d dataset")
+    if ("-d" in sys.argv and "-q" in sys.argv and "-od" in sys.argv and "-oq" in sys.argv):
+        dataset = sys.argv[sys.argv.index("-d")+1]
+        queryset = sys.argv[sys.argv.index("-q")+1]
+        output_data = sys.argv[sys.argv.index("-od")+1]
+        output_query = sys.argv[sys.argv.index("-oq")+1]
+    else:
+        sys.exit("Wrong or missing parameter. Please execute with: -d dataset -q queryset -od output_data -oq output_query")
 
-    dataset = sys.argv[2]
     # numarray[0] -> magic_number, [1] -> images, [2] -> rows, [3] -> columns
     df = values_df()
     hypernames = ["Layers", "Filter_Size", "Filters/Layer", "Epochs", "Batch_Size"]
@@ -26,7 +30,8 @@ def main():
     train_X, valid_X, train_Y, valid_Y = reshape_dataset(pixels, numarray)
     print("Data ready in numpy array!\n")
     # Layers, Filter_size, Filters/Layer, Epochs, Batch_size
-    parameters = input_parameters()
+    parameters = [2, 3, 4, 1, 128]
+    # parameters = input_parameters()
     newparameter = [[] for i in range(len(parameters))]
     originparms = parameters.copy()
     oldparm = -1
@@ -43,28 +48,15 @@ def main():
         train_time = time.time()
         autoencoder_train = autoencoder.fit(train_X, train_Y, batch_size=parameters[4], epochs=parameters[3], verbose=1, validation_data=(valid_X, valid_Y))
         train_time = time.time() - train_time
-        print(autoencoder.summary())
+        # print(autoencoder.summary())
 
-        # IN FUNCTION -> WRITE:
-        outputs = (K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10))
-        lst = list(outputs)
+        embedding_outputs = (K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10))
+        lst = list(embedding_outputs)
         # newlst = [(i/255).astype(int) for i in lst[0][0]]
         newlst = [(i).astype(int) for i in lst[0][0]]
-        print(newlst[0])
-        output_file = open('output', 'wb')
-        # output_file.write(len(newlst).to_bytes(2, 'big'))
-        for i in newlst:
-            for j in i:
-                output_file.write(j.item().to_bytes(2, 'big'))
-        output_file.close()
 
-        # IN FUNCTION -> READ:
-        with open('output', 'rb') as file:
-            print(int.from_bytes(file.read(2), byteorder='big'))
-            for i in range(10):
-                print(int.from_bytes(file.read(2), byteorder='big'))
-            # l = list(bytes_group(10, file.read(), fillvalue=0))
-            # print(l[0])
+        write_output(newlst, output_data)
+        read_lst = read_output(output_data)
 
         # User choices:
         parameters, continue_flag, oldparm = user_choices(autoencoder, autoencoder_train, parameters, originparms, train_time, newparameter, oldparm, df, hypernames)

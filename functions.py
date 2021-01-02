@@ -346,6 +346,23 @@ def values_df():
         df = pd.DataFrame(data=loss_values)
     return df
 
+def write_output(list_output, filename):
+    output_file = open(filename, 'wb')
+    output_file.write(len(list_output).to_bytes(2, 'big'))
+    for i in list_output:
+        for j in i:
+            output_file.write(j.item().to_bytes(2, 'big'))
+    output_file.close()
+
+def read_output(filename):
+    read_lst = []
+    with open(filename, 'rb') as file:
+        print(int.from_bytes(file.read(2), byteorder='big'))
+        for i in range(10):
+            read_lst.append(int.from_bytes(file.read(2), byteorder='big'))
+    print(read_lst)
+    return read_lst
+
 def classification_values_df():
     try:
         df = pd.read_csv('classification_loss_values.csv',sep='\t')
