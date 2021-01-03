@@ -53,6 +53,7 @@ def main():
         newlst = normalization(embedding)
         write_output(newlst, len(embedding[0][0]), output_data)
 
+        # READ FROM OUTPUT
         # pixels, numarray = numpy_from_dataset(output_data, 4, True)
 
         # User choices:
