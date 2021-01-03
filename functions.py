@@ -8,7 +8,7 @@ from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormali
 from sklearn.metrics import classification_report
 from PIL import Image
 
-def numpy_from_dataset(inputpath, numbers):
+def numpy_from_dataset(inputpath, numbers, per_2_bytes):
     pixels = []
     numarray = []
     with open(inputpath, "rb") as file:
@@ -17,7 +17,14 @@ def numpy_from_dataset(inputpath, numbers):
         print("Storing data in array...")
         # 2d numpy array for images->pixels
         if numbers == 4:
-            pixels = np.array(list(bytes_group(numarray[2]*numarray[3], file.read(), fillvalue=0)))
+            if per_2_bytes:
+                data = file.read(2)
+                while data:
+                    pixels.append(int.from_bytes(data, byteorder='big'))
+                    data = file.read(2)
+                pixels = np.array(list(bytes_group(numarray[3], pixels, fillvalue=0)))
+            else:
+                pixels = np.array(list(bytes_group(numarray[2]*numarray[3], file.read(), fillvalue=0)))
         elif numbers == 2:
             pixels = np.array(list(bytes_group(1, file.read(), fillvalue=0)))
     return pixels, numarray
@@ -171,15 +178,17 @@ def name_parameter(parameters, number, flag, hypernames):
     name = ""
     if (flag):
         if (number==0):
-            name = "Lx"+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_B"+str(parameters[4])
+            name = "Lx"+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_B"+str(parameters[4])+"_LV"+str(parameters[5])
         elif (number==1):
-            name = "L"+str(parameters[0])+"_FSx"+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_B"+str(parameters[4])
+            name = "L"+str(parameters[0])+"_FSx"+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_B"+str(parameters[4])+"_LV"+str(parameters[5])
         elif (number==2):
-            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FLx"+"_E"+str(parameters[3])+"_B"+str(parameters[4])
+            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FLx"+"_E"+str(parameters[3])+"_B"+str(parameters[4])+"_LV"+str(parameters[5])
         elif (number==3):
-            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_Ex"+"_B"+str(parameters[4])
+            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_Ex"+"_B"+str(parameters[4])+"_LV"+str(parameters[5])
         elif (number==4):
-            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_Bx"
+            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_Bx"+"_LV"+str(parameters[5])
+        elif (number==5):
+            name = "L"+str(parameters[0])+"_FS"+str(parameters[1])+"_FL"+str(parameters[2])+"_E"+str(parameters[3])+"_B"+str(parameters[4])+"_LVx"
     else:
         name = hypernames[number]
     return name
@@ -218,11 +227,11 @@ def user_choices(model, modeltrain, parameters, originparms, train_time, newpara
             continue
         if (run_again==1):
             try:
-                indexparm = int(input("Choose what parameter would like to change (options 1-5): \n1)Layers\n2)Filter size\n3)Filters/Layer\n4)Epochs\n5)Batch size\n---------------> "))
+                indexparm = int(input("Choose what parameter would like to change (options 1-6): \n1)Layers\n2)Filter size\n3)Filters/Layer\n4)Epochs\n5)Batch size\n6)Latent vector\n---------------> "))
             except:
                 print("Invalid choice.Try again\n")
                 continue
-            if (indexparm>=1 and indexparm<=5):
+            if (indexparm>=1 and indexparm<=6):
                 try:
                     changepar = int(input("Number for "+ name_parameter(parameters, indexparm-1, False, hypernames) +" is "+str(parameters[indexparm-1])+". Type the new number: "))
                 except:
@@ -250,7 +259,7 @@ def user_choices(model, modeltrain, parameters, originparms, train_time, newpara
             # break
         elif (run_again == 4):
             df.loc[len(df), :] = parameters + [train_time] + [modeltrain.history['loss'][-1]] + [modeltrain.history['val_loss'][-1]]
-            df.drop_duplicates(subset=['Layers', 'Filter_Size', 'Filters/Layer', 'Epochs', 'Batch_Size'], inplace=True)
+            df.drop_duplicates(subset=['Layers', 'Filter_Size', 'Filters/Layer', 'Epochs', 'Batch_Size', 'Latent_vector'], inplace=True)
             df = df.sort_values(by = 'Val_Loss', ascending=True)
             df.to_csv('loss_values.csv', sep='\t', index=False)
             continue_flag = False
@@ -334,6 +343,7 @@ def input_parameters():
         parameters.append(int(input("Type number of filters/layer: ")))
         parameters.append(int(input("Type number of epochs: ")))
         parameters.append(int(input("Type batch size: ")))
+        parameters.append(int(input("Type latent vector size: ")))
     except:
         print("Invalid choice.Try again\n")
     return parameters
@@ -342,26 +352,43 @@ def values_df():
     try:
         df = pd.read_csv('loss_values.csv',sep='\t')
     except:
-        loss_values = {'Layers': [], 'Filter_Size': [], 'Filters/Layer': [], 'Epochs': [], 'Batch_Size': [], 'Train_Time': [], 'Loss': [], 'Val_Loss': []}
+        loss_values = {'Layers': [], 'Filter_Size': [], 'Filters/Layer': [], 'Epochs': [], 'Batch_Size': [], 'Latent_vector': [], 'Train_Time': [], 'Loss': [], 'Val_Loss': []}
         df = pd.DataFrame(data=loss_values)
     return df
 
-def write_output(list_output, filename):
+def write_output(list_output, numdata, filename):
     output_file = open(filename, 'wb')
-    output_file.write(len(list_output).to_bytes(2, 'big'))
+    rows = 1
+    columns = 10
+    output_file.write(rows.to_bytes(4, 'big'))
+    output_file.write(numdata.to_bytes(4, 'big'))
+    output_file.write(rows.to_bytes(4, 'big'))
+    output_file.write(columns.to_bytes(4, 'big'))
     for i in list_output:
-        for j in i:
-            output_file.write(j.item().to_bytes(2, 'big'))
+        output_file.write(i.to_bytes(2, 'big'))
     output_file.close()
 
-def read_output(filename):
-    read_lst = []
-    with open(filename, 'rb') as file:
-        print(int.from_bytes(file.read(2), byteorder='big'))
-        for i in range(10):
-            read_lst.append(int.from_bytes(file.read(2), byteorder='big'))
-    print(read_lst)
-    return read_lst
+# def read_output(filename):
+#     read_lst = []
+#     with open(filename, 'rb') as file:
+#         num2 = int.from_bytes(file.read(4), byteorder='big')
+#         numdata = int.from_bytes(file.read(4), byteorder='big')
+#         num2 = int.from_bytes(file.read(4), byteorder='big')
+#         num2 = int.from_bytes(file.read(4), byteorder='big')
+#         for i in range(10):
+#             read_lst.append(int.from_bytes(file.read(2), byteorder='big'))
+#     return numdata, read_lst
+
+#Normalization using feature scaling between any arbitrary points 0 and 25500
+def normalization(embedding):
+    a = 0
+    b = 25500
+    min = np.min(embedding[0][0])
+    max = np.max(embedding[0][0])
+    # https://en.wikipedia.org/wiki/Feature_scaling
+    normalized = [((b-a)*((i-min)/(max-min))+a).astype(int) for i in embedding[0][0]]
+    normalized = np.concatenate(normalized).ravel().tolist()
+    return normalized
 
 def classification_values_df():
     try:
@@ -378,14 +405,12 @@ def encoder_layers(autoencoder, autoencoderLayers, input):
         x = layer(x)
     return x
 
-
 def fc_layers(input, fully_connected_num):
     x = Flatten()(input)
     x = Dense(fully_connected_num, activation='relu')(x)
     x = Dense(10, activation='softmax')(x)
     print("train fully connected layers")
     return x
-
 
 def classifier_layers(autoencoder, autoencoderLayers, fully_connected_num, input):
     # encoder_layers
@@ -394,12 +419,10 @@ def classifier_layers(autoencoder, autoencoderLayers, fully_connected_num, input
     x = fc_layers(x,fully_connected_num)
     return x
 
-
 def count_half_layers(layers):
     result = layers*2 + 2 + 1
     #print("layers of encoder:", result)
     return result
-
 
 def labels_to_binary(labels, categ_range):
     binary_labels = []
@@ -413,7 +436,6 @@ def labels_to_binary(labels, categ_range):
         binary_labels.append(temp)
     binary_labels = np.array(binary_labels)
     return binary_labels
-
 
 def incorrect_predictions(test_pixels, test_labels, predicted_labels, first_wrong_num):
     correct_labels = (test_labels != predicted_labels)
@@ -431,7 +453,6 @@ def incorrect_predictions(test_pixels, test_labels, predicted_labels, first_wron
             count = count + 1
             first_wrong_num = first_wrong_num - 1
 
-
 def correct_predictions(test_pixels, test_labels, predicted_labels, first_wrong_num):
     correct_labels = (test_labels == predicted_labels)
     count = 1
@@ -448,12 +469,10 @@ def correct_predictions(test_pixels, test_labels, predicted_labels, first_wrong_
             count = count + 1
             first_wrong_num = first_wrong_num - 1
 
-
 def print_predictions_numbers(test_labels, predicted_labels):
     correct_labels = (test_labels != predicted_labels)
     print('Found ', len(test_labels) - np.count_nonzero(correct_labels == True), ' correct labels')
     print('Found ', np.count_nonzero(correct_labels == True), ' incorrect labels')
-
 
 def training_plots(model):
     loss = model.history.history['loss']

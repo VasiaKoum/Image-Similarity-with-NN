@@ -23,14 +23,14 @@ def main():
 
     # numarray[0] -> magic_number, [1] -> images, [2] -> rows, [3] -> columns
     df = values_df()
-    hypernames = ["Layers", "Filter_Size", "Filters/Layer", "Epochs", "Batch_Size"]
-    pixels, numarray = numpy_from_dataset(dataset, 4)
+    hypernames = ["Layers", "Filter_Size", "Filters/Layer", "Epochs", "Batch_Size", "Latent_Vector"]
+    pixels, numarray = numpy_from_dataset(dataset, 4, False)
     if (len(numarray)!=4 or len(pixels)==0):
         sys.exit("Input dataset does not have the required number of values")
     train_X, valid_X, train_Y, valid_Y = reshape_dataset(pixels, numarray)
     print("Data ready in numpy array!\n")
-    # Layers, Filter_size, Filters/Layer, Epochs, Batch_size
-    parameters = [2, 3, 4, 1, 128]
+    # Layers, Filter_size, Filters/Layer, Epochs, Batch_size, Latent_vector
+    parameters = [2, 3, 4, 1, 128, 10]
     # parameters = input_parameters()
     newparameter = [[] for i in range(len(parameters))]
     originparms = parameters.copy()
@@ -41,22 +41,19 @@ def main():
         input_img = Input(shape=(numarray[2], numarray[3], 1))
         encoder_layer = encoder(input_img, parameters)
         bottleneck_layer = bottleneck(encoder_layer, parameters)
-
         autoencoder = Model(input_img, decoder(bottleneck_layer, parameters))
         autoencoder.compile(loss='mean_squared_error', optimizer=RMSprop())
-
+        # Begin model-fitting
         train_time = time.time()
         autoencoder_train = autoencoder.fit(train_X, train_Y, batch_size=parameters[4], epochs=parameters[3], verbose=1, validation_data=(valid_X, valid_Y))
         train_time = time.time() - train_time
         # print(autoencoder.summary())
 
-        embedding_outputs = (K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10))
-        lst = list(embedding_outputs)
-        # newlst = [(i/255).astype(int) for i in lst[0][0]]
-        newlst = [(i).astype(int) for i in lst[0][0]]
+        embedding = list((K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10)))
+        newlst = normalization(embedding)
+        write_output(newlst, len(embedding[0][0]), output_data)
 
-        write_output(newlst, output_data)
-        read_lst = read_output(output_data)
+        # pixels, numarray = numpy_from_dataset(output_data, 4, True)
 
         # User choices:
         parameters, continue_flag, oldparm = user_choices(autoencoder, autoencoder_train, parameters, originparms, train_time, newparameter, oldparm, df, hypernames)
