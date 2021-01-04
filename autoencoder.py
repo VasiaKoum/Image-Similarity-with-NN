@@ -49,9 +49,9 @@ def main():
         train_time = time.time() - train_time
         # print(autoencoder.summary())
 
-        embedding = list((K.function([autoencoder.input], [layer.output])(train_X) for layer in autoencoder.layers if layer.output_shape == (None, 10)))
-        newlst = normalization(embedding)
-        write_output(newlst, len(embedding[0][0]), output_data)
+        if oldparm<0:
+            write_outfile(pixels, numarray, autoencoder, dataset, output_data)
+            write_outfile(None, None, autoencoder, queryset, output_query)
 
         # READ FROM OUTPUT
         # pixels, numarray = numpy_from_dataset(output_data, 4, True)

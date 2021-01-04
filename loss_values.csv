@@ -1,0 +1,2 @@
+Layers	Filter_Size	Filters/Layer	Epochs	Batch_Size	Latent_vector	Train_Time	Loss	Val_Loss
+2.0	3.0	4.0	1.0	128.0	10.0	66.10830783843994	0.07123805582523346	0.10204705595970154

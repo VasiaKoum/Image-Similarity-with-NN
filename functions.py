@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from keras.models import Model, model_from_json
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Dropout, Flatten, Dense, Reshape, Conv2DTranspose
 from sklearn.metrics import classification_report
+from tensorflow.python.keras import backend as K
 from PIL import Image
 
 def numpy_from_dataset(inputpath, numbers, per_2_bytes):
@@ -50,7 +51,6 @@ def bottleneck(enc, parameters):
     flatten_layer = Flatten()(enc)
     embedding_layer = Dense(10, activation="relu")(flatten_layer)
     dense_layer = Dense(flatten_layer.shape[1], activation="softmax")(embedding_layer)
-    print(enc.shape)
     reshape_layer = Reshape((enc.shape[1], enc.shape[2], enc.shape[3]))(dense_layer)
     return reshape_layer
 
@@ -368,17 +368,6 @@ def write_output(list_output, numdata, filename):
         output_file.write(i.to_bytes(2, 'big'))
     output_file.close()
 
-# def read_output(filename):
-#     read_lst = []
-#     with open(filename, 'rb') as file:
-#         num2 = int.from_bytes(file.read(4), byteorder='big')
-#         numdata = int.from_bytes(file.read(4), byteorder='big')
-#         num2 = int.from_bytes(file.read(4), byteorder='big')
-#         num2 = int.from_bytes(file.read(4), byteorder='big')
-#         for i in range(10):
-#             read_lst.append(int.from_bytes(file.read(2), byteorder='big'))
-#     return numdata, read_lst
-
 #Normalization using feature scaling between any arbitrary points 0 and 25500
 def normalization(embedding):
     a = 0
@@ -389,6 +378,14 @@ def normalization(embedding):
     normalized = [((b-a)*((i-min)/(max-min))+a).astype(int) for i in embedding[0][0]]
     normalized = np.concatenate(normalized).ravel().tolist()
     return normalized
+
+def write_outfile(pixels, numarray, autoencoder, imageset, outputname):
+    if pixels is None:
+        pixels, numarray = numpy_from_dataset(imageset, 4, False)
+    newpixels = np.reshape(pixels, (-1, numarray[2], numarray[3]))
+    embedding = list((K.function([autoencoder.input], [layer.output])(newpixels) for layer in autoencoder.layers if layer.output_shape == (None, 10)))
+    newlst = normalization(embedding)
+    write_output(newlst, len(embedding[0][0]), outputname)
 
 def classification_values_df():
     try:
