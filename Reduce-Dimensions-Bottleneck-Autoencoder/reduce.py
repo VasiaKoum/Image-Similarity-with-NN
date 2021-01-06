@@ -1,4 +1,4 @@
-# python reduce.py -d ./Datasets/train-images-idx3-ubyte -q ./Datasets/t10k-images-idx3-ubyte -od outdata -oq outquery
+# python reduce.py -d ../Datasets/train-images-idx3-ubyte -q ../Datasets/t10k-images-idx3-ubyte -od outdata -oq outquery
 import sys
 import time
 import struct
