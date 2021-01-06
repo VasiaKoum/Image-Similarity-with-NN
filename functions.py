@@ -49,10 +49,16 @@ def encoder(input_img, parameters):
 
 def bottleneck(enc, parameters):
     flatten_layer = Flatten()(enc)
-    embedding_layer = Dense(10, activation="relu")(flatten_layer)
-    dense_layer = Dense(flatten_layer.shape[1], activation="softmax")(embedding_layer)
+    embedding_layer = Dense(parameters[5])(flatten_layer)
+    dense_layer = Dense(flatten_layer.shape[1])(embedding_layer)
     reshape_layer = Reshape((enc.shape[1], enc.shape[2], enc.shape[3]))(dense_layer)
-    return reshape_layer
+
+    # flatten_layer = Flatten()(enc)
+    # embedding_layer = Dense(parameters[5], activation="relu")(flatten_layer)
+    # dense_layer = Dense(flatten_layer.shape[1], activation="softmax")(embedding_layer)
+    # reshape_layer = Reshape((enc.shape[1], enc.shape[2], enc.shape[3]))(dense_layer)
+
+    return reshape_layer, embedding_layer
 
 def decoder(conv, parameters):
     layers = parameters[0]
@@ -379,11 +385,11 @@ def normalization(embedding):
     normalized = np.concatenate(normalized).ravel().tolist()
     return normalized
 
-def write_outfile(pixels, numarray, autoencoder, imageset, outputname):
+def write_outfile(pixels, numarray, autoencoder, imageset, outputname, parameters):
     if pixels is None:
         pixels, numarray = numpy_from_dataset(imageset, 4, False)
     newpixels = np.reshape(pixels, (-1, numarray[2], numarray[3]))
-    embedding = list((K.function([autoencoder.input], [layer.output])(newpixels) for layer in autoencoder.layers if layer.output_shape == (None, 10)))
+    embedding = list((K.function([autoencoder.input], [layer.output])(newpixels) for layer in autoencoder.layers if layer.output_shape == (None, parameters[5])))
     newlst = normalization(embedding)
     write_output(newlst, len(embedding[0][0]), outputname)
 

@@ -1,4 +1,4 @@
-# python autoencoder.py -d ./Datasets/train-images-idx3-ubyte -q ./Datasets/t10k-images-idx3-ubyte -od outdata -oq outquery
+# python reduce.py -d ./Datasets/train-images-idx3-ubyte -q ./Datasets/t10k-images-idx3-ubyte -od outdata -oq outquery
 import sys
 import time
 import struct
@@ -40,7 +40,7 @@ def main():
         print("\nBegin building model...")
         input_img = Input(shape=(numarray[2], numarray[3], 1))
         encoder_layer = encoder(input_img, parameters)
-        bottleneck_layer = bottleneck(encoder_layer, parameters)
+        bottleneck_layer, embedding_layer = bottleneck(encoder_layer, parameters)
         autoencoder = Model(input_img, decoder(bottleneck_layer, parameters))
         autoencoder.compile(loss='mean_squared_error', optimizer=RMSprop())
         # Begin model-fitting
@@ -50,8 +50,8 @@ def main():
         # print(autoencoder.summary())
 
         if oldparm<0:
-            write_outfile(pixels, numarray, autoencoder, dataset, output_data)
-            write_outfile(None, None, autoencoder, queryset, output_query)
+            write_outfile(pixels, numarray, autoencoder, dataset, output_data, parameters)
+            write_outfile(None, None, autoencoder, queryset, output_query, parameters)
 
         # READ FROM OUTPUT
         # pixels, numarray = numpy_from_dataset(output_data, 4, True)
