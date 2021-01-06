@@ -1,0 +1,1 @@
+query:  0  nearest neighbour image:  0  with distance:  30956.124086713193
