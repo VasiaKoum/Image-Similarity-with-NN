@@ -33,7 +33,7 @@ pixels, numarray = numpy_from_dataset(dataset, 4, False)
 qpixels, qnumarray = numpy_from_dataset(queryset, 4, False)
 
 dims = 28
-clusterDim = 4
+clusterDim = 7
 step = clusterDim
 
 onetimepass = True
@@ -120,7 +120,7 @@ for qindex,query in enumerate(qpixels):
         # print(p.LpStatus[status])
         # print(p.value(Lp_prob.objective))
         results.append((index, p.value(Lp_prob.objective)))
-        break
+
     sorted(results, key=lambda x: x[1])
     print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1], file=output)
     print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1])
