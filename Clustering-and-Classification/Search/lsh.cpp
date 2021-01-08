@@ -72,7 +72,7 @@ int main(int argc, char** argv){
             //     cerr<<"Failed to open input data."<<endl;
             //     return(0);
             // }
-            
+
             trainInput.open(d, std::ios::binary);
             if(!trainInput.is_open()){
                 cerr<<"Failed to open input data."<<endl;
