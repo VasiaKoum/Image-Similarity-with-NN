@@ -1,34 +1,20 @@
-#include <iostream>
-#include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <vector>
-#include <fstream>
-#include <string>
 #include <sstream>
-#include <cmath>
 #include "centroids.hpp"
-#include "../Search/hash.hpp"
-#include "../Search/dataset.hpp"
-#include "../Search/lshalgorithms.hpp"
-
 #define SWAP_INT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
-// ./cluster -i ../train-images.idx3-ubyte -c ../cluster.conf -o fileo -complete 4 -m LSH
-// ./cluster -i <input file> -c <configuration file> -o <output file> -complete <optional> -m <method: Classic or LSH or Hypercube>
-
 using namespace std;
 
 int main(int argc, char** argv){
     if (argc>6 && argc<16){
-        char *I=NULL, *c=NULL, *o=NULL, *m=NULL;
+        char method[] = "Classic";
+        char *I=NULL, *c=NULL, *o=NULL, *n=NULL, *d=NULL, *m = method;
         double R=1.0, exec_time;
         int K=-1, L=3, kLSH=14, M=10, kHYP=3, probes=2;
-        bool complete = false;
         bool vars[5] = { 0 };
         for (int i=0; i<5; i++) vars[i] = true;
         for (int i=0; i<argc; i++){
             if (!strcmp("-i", argv[i]) && vars[0]) {
-                I = (char*)argv[i+1];   /* -input file */
+                I = (char*)argv[i+1];   /* -input file new space*/
                 vars[0] = false;
             }
             if (!strcmp("-c", argv[i]) && vars[1]) {
@@ -39,19 +25,18 @@ int main(int argc, char** argv){
                 o = (char*)argv[i+1];   /* -output file */
                 vars[2] = false;
             }
-            if (!strcmp("-complete", argv[i]) && vars[3]) {
-                complete = true;   /* -optional */
+            if (!strcmp("-d", argv[i]) && vars[3]) {
+                d = (char*)argv[i+1];   /* -input file original space */
                 vars[3] = false;
             }
-            if (!strcmp("-m", argv[i]) && vars[4]) {
-                m = (char*)argv[i+1];   /* method: Classic or LSH or Hypercube */
+            if (!strcmp("-n", argv[i]) && vars[4]) {
+                n = (char*)argv[i+1];   /* classes from NN as clusters */
                 vars[4] = false;
             }
         }
 
-        if(I==NULL || c==NULL || o==NULL){
-            cout << "You must run the program with parameters(REQUIRED): -i <input file> -c <configuration file> -o <output file>" << endl;
-            cout << "With additional parameters: -complete <optional> -m <method: Classic or LSH or Hypercube>" << endl;
+        if(I==NULL || c==NULL || o==NULL || d==NULL || n==NULL){
+            cout << "You must run the program with parameters: -d <input file original space> -i <input file new space> -n <classes from NN as clusters> -c <configuration file> -o <output file>" << endl;
             return 0;
         }
         else{
@@ -59,7 +44,7 @@ int main(int argc, char** argv){
             /* PROGRAM STARTS HERE */
             clock_t tStart = clock();
 
-            int magicNumber = 0, numberOfImages = 0, numberOfRows = 0, numberOfColumns = 0, img=0;
+            unsigned int magicNumber = 0, numberOfImages = 0, numberOfRows = 0, numberOfColumns = 0, img=0;
 
             //Open train file
             fstream trainInput(I);
@@ -121,7 +106,7 @@ int main(int argc, char** argv){
             Centroids centroids(K, numberOfImages, &trainSet);
             centroids.Initialize();
             Clusters clusters(&centroids);
-            clusters.Clustering(m, o, complete, L, kLSH, M, kHYP, probes);
+            clusters.Clustering(m, o, false, L, kLSH, M, kHYP, probes);
 
             /* PROGRAM ENDS HERE */
             exec_time = (double)(clock() - tStart)/CLOCKS_PER_SEC;
@@ -129,7 +114,6 @@ int main(int argc, char** argv){
         }
     }
     else{
-        cout << "You must run the program with parameters(REQUIRED): -i <input file> -c <configuration file> -o <output file>" << endl;
-        cout << "With additional parameters: -complete <optional> -m <method: Classic or LSH or Hypercube>" << endl;
+cout << "You must run the program with parameters: -d <input file original space> -i <input file new space> -n <classes from NN as clusters> -c <configuration file> -o <output file>" << endl;
     }
 }

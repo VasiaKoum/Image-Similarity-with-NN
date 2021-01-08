@@ -1,17 +1,11 @@
-#include <iostream>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <string>
-#include <cmath>
 #include <random>
 #include <cfloat>
 #include <algorithm>
-#include <vector>
-#include <fstream>
 #include "../Search/metrics.hpp"
-#include "centroids.hpp"
 #include "../Search/cubeAlgorithms.hpp"
+#include "centroids.hpp"
 #define PERCENT_CHANGED_POINTS 99
 #define MAX_LOOPS 12
 #define RADIUS 8000
