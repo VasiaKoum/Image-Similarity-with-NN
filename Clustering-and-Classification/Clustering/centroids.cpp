@@ -4,7 +4,6 @@
 #include <cfloat>
 #include <algorithm>
 #include "../Search/metrics.hpp"
-#include "../Search/cubeAlgorithms.hpp"
 #include "centroids.hpp"
 #define PERCENT_CHANGED_POINTS 99
 #define MAX_LOOPS 12
@@ -120,86 +119,17 @@ void Centroids::Initialize(){
 
 Clusters::Clusters(Centroids* argCntrds) : Cntrds(argCntrds){}
 
-void Clusters::Clustering(char* method, char* output, bool complete, int numHashTables, int numHashFunctions, int maxMhypercube, int hypercubeDim, int numprobes){
+void Clusters::Clustering(char* output){
     clock_t tStart, tClustering, tSilhouette;
-    cout << "Begin clustering with " << method << " method for: "  << Cntrds->getNumPoints() << " points." << endl;
-    if(strcmp(method, "CLASSIC")==0 || strcmp(method, "classic")==0 || strcmp(method, "Classic")==0){
-        tStart = clock();
-        Lloyds();
-        tClustering = (double)(clock() - tStart)/CLOCKS_PER_SEC;
-    }
-    else if(strcmp(method, "LSH")==0 || strcmp(method, "lsh")==0 || strcmp(method, "Lsh")==0){
-        //Initialize hashtables & hashfunctions
-        cout << "Initialize HashTables and HashFunctions..." << endl;
-        int points = Cntrds->getNumPoints();
-        Dataset *set = Cntrds->getSet();
-        int bucketsNumber = floor(points/16);
-        HashFunction **hashFamily = new HashFunction*[set->getNumberOfPixels()];
-        for(int i=0; i<set->getNumberOfPixels(); i++){
-            hashFamily[i] = NULL;
-        }
-        HashTable **hashTables = new HashTable*[numHashTables];
-        for(int i=0; i<numHashTables; i++){
-            hashTables[i] = new HashTable(set->getNumberOfPixels(),bucketsNumber,numHashFunctions,W,hashFamily);
-            for(int j=0; j<points; j++){
-                unsigned int g_hash = (unsigned int)(hashTables[i]->ghash(set->imageAt(j)));
-                hashTables[i]->getBucketArray()[g_hash%bucketsNumber]->addImage(j,g_hash,set->imageAt(j));
-            }
-        }
-        tStart = clock();
-        LSHReverseAssignment(numHashTables, numHashFunctions, hashTables);
-        tClustering = (double)(clock() - tStart)/CLOCKS_PER_SEC;
-        for(int i=0; i<set->getNumberOfPixels(); i++){
-            if(hashFamily[i]!=NULL){
-                delete hashFamily[i];
-            }
-        }
-        delete[] hashFamily;
-        for(int i=0; i<numHashTables; i++) delete hashTables[i];
-        delete[] hashTables;
-
-        //Find next best neighbor cluster
-        FindNextBest();
-    }
-    else if(strcmp(method, "HYPERCUBE")==0 || strcmp(method, "hypercube")==0 || strcmp(method, "Hypercube")==0){
-        //Initialize hypercube structures
-        cout << "Initialize HashTables and HashFunctions..." << endl;
-        int points = Cntrds->getNumPoints();
-        Dataset *set = Cntrds->getSet();
-        int bucketsNumber = floor(points/16);
-        HashFunction **hashFamily = new HashFunction*[set->getNumberOfPixels()];
-        for(int i = 0; i < set->getNumberOfPixels();i++){
-            hashFamily[i] = NULL;
-        }
-        Projection *projection = new Projection(set->getNumberOfPixels(), bucketsNumber, hypercubeDim, W, hashFamily);
-        for(int j=0; j<points; j++){
-            unsigned int g_hash = (unsigned int)(projection->ghash(set->imageAt(j)));
-            projection->getBucketArray()[g_hash%bucketsNumber]->addImage(j,g_hash,set->imageAt(j));
-        }
-        tStart = clock();
-        PROJReverseAssignment(maxMhypercube, numprobes, projection);
-        tClustering = (double)(clock() - tStart)/CLOCKS_PER_SEC;
-        for(int i=0; i<set->getNumberOfPixels(); i++){
-                if(hashFamily[i]!=NULL){
-                    delete hashFamily[i];
-                }
-            }
-        delete[] hashFamily;
-        delete projection;
-
-        //Find next best neighbor cluster
-        FindNextBest();
-    }
-    else{
-        cout << "Wrong method. The available methods are: Classic, LSH, Hypercube." << endl;
-        return;
-    }
-    cout << "Time of clustering: " << (double)tClustering << endl;
-
+    cout << "Begin clustering with Classic method for: "  << Cntrds->getNumPoints() << " points." << endl;
     tStart = clock();
-    Silhouette();
+    Lloyds();
+    tClustering = (double)(clock() - tStart)/CLOCKS_PER_SEC;
+    cout << "Time of clustering: " << (double)tClustering << endl;
+    tStart = clock();
+    // Silhouette();
     tSilhouette = (double)(clock() - tStart)/CLOCKS_PER_SEC;
-    Output(method, output, complete, tClustering, tSilhouette);
+    Output(output, tClustering, tSilhouette);
 }
 
 //Update
@@ -327,191 +257,11 @@ void Clusters::FindNextBest(){
     }
 }
 
-void Clusters::AssignReverse(vector<vector<Neighbor>> Neighbors, bool initialize){
-    int points = Cntrds->getNumPoints();
-    int clusters = Cntrds->getNumClusters();
-    int *centroids = Cntrds->getCentroids();
-    double **DParray = Cntrds->getDParray();
-    Dataset *set = Cntrds->getSet();
-    unsigned char* CentroidVector = NULL;
-
-    if(initialize){
-        for(int i=0; i<clusters; i++) CntrdsVectors.push_back(std::vector<unsigned char>());
-    }
-
-    //Unassign all points
-    for(int i=0; i<points; i++) DParray[0][i] = -1;
-    for(int i=0; i<Neighbors.size(); i++){
-        for(int j=0; j<Neighbors[i].size(); j++){
-            int index = Neighbors[i][j].getIndex();
-            //Check if point is unassigned or it has been already assigned
-            if(DParray[0][index]<0){
-                DParray[0][index] = Neighbors[i][j].getlshDist();
-                DParray[2][index] = i;
-            }
-            else{
-                //If is already assigned then find the nearest Centroid
-                if(initialize) CentroidVector = set->imageAt(centroids[i]);
-                else CentroidVector = &CntrdsVectors[i][0];
-                double manh = manhattan(set->imageAt(index), CentroidVector, set->dimension());
-                if(manh<DParray[0][index]){
-                    DParray[0][index] = manh;
-                    DParray[2][index] = i;
-                }
-            }
-
-        }
-    }
-    double min = 0, manh = 0;
-    //For unassigned points
-    for(int i=0; i<points; i++){
-        if(DParray[0][i]<0){
-            min = DBL_MAX;
-            for(int j=0; j<clusters; j++){
-                if(initialize) CentroidVector = set->imageAt(centroids[j]);
-                else CentroidVector = &CntrdsVectors[j][0];
-                manh = manhattan(set->imageAt(i), CentroidVector, set->dimension());
-                if(manh<min){
-                    DParray[0][i] = manh;
-                    DParray[2][i] = j;
-                    min = manh;
-                }
-            }
-        }
-    }
-}
-
-void Clusters::LSHReverseAssignment(int numHashTables, int numHashFunctions, HashTable **hashTables){
-    int points = Cntrds->getNumPoints();
-    int clusters = Cntrds->getNumClusters();
-    int *centroids = Cntrds->getCentroids();
-    double **DParray = Cntrds->getDParray();
-    Dataset *set = Cntrds->getSet();
-    int radius = RADIUS;
-
-    //Initialize images from centroids
-    vector<vector<Neighbor>> RNGneighbors;
-    for(int i=0; i<clusters; i++){
-        RNGneighbors.push_back(std::vector<Neighbor>());
-        RNGsearch(RNGneighbors[i], numHashTables, radius, set->imageAt(centroids[i]), hashTables);
-    }
-    AssignReverse(RNGneighbors, true);
-    //Initialize clusters from DParray structure
-    int *tmp = Cntrds->getCentroids();
-    for(int i=0; i<clusters; i++)
-        images.push_back(std::vector<int>());
-    for(int i=0; i<points; i++)
-        images[DParray[2][i]].push_back(i); //Push image to the centroid with min dist DParray[2][i]
-
-    int loops = 0;
-    int tmpPoint = 0;
-    int changedpoints = set->getNumberOfImages();
-    int floor_changed_points = points - (points*PERCENT_CHANGED_POINTS/100);
-    cout << "Clustering until: changed_points<=" << floor_changed_points << " OR Max_loops=" << MAX_LOOPS << endl;
-
-    //Checking for no-change
-    while(changedpoints>floor_changed_points && loops<MAX_LOOPS){
-        cout << "IN LOOP: " << loops+1 << "/" << MAX_LOOPS << endl;
-        changedpoints = 0;
-        //Clear neighbors
-        for(int i=0; i<RNGneighbors.size(); i++) RNGneighbors[i].clear();
-
-        //Update Centroids from clusters
-        Update();
-
-        // Assignment
-        for(int i=0; i<clusters; i++)
-            RNGsearch(RNGneighbors[i], numHashTables, radius, &CntrdsVectors[i][0], hashTables);
-        AssignReverse(RNGneighbors, false);
-
-        //Change points from the old cluster to the new
-        for(int i=0; i<clusters; i++){
-            for(int j=0; j<images[i].size(); j++){
-                int newCluster = DParray[2][images[i][j]];
-                if(i!=newCluster){
-                    tmpPoint = images[i][j];
-                    images[i].erase(images[i].begin()+j);
-                    images[newCluster].push_back(tmpPoint);
-                    changedpoints++;
-                }
-            }
-        }
-        cout << "Changed points: " << changedpoints << "\n\n";
-        radius = radius*2;
-        loops++;
-    }
-}
-
-void Clusters::PROJReverseAssignment(int maxMhypercube, int numprobes, Projection* projection){
-    int points = Cntrds->getNumPoints();
-    int clusters = Cntrds->getNumClusters();
-    int *centroids = Cntrds->getCentroids();
-    double **DParray = Cntrds->getDParray();
-    Dataset *set = Cntrds->getSet();
-    vector<Neighbor> ANNneighbors;
-    vector<double> ANNtrueDist, RNGtrueDist;
-    double cubeAnnTime=0, cubeRngTime=0, trueAnnTime=0, trueRngTime=0;
-    int radius = RADIUS;
-
-    //Initialize images from centroids
-    vector<vector<Neighbor>> RNGneighbors;
-    for(int i=0; i<clusters; i++){
-        RNGneighbors.push_back(std::vector<Neighbor>());
-        hyperCubeSearch(ANNneighbors, RNGneighbors[i], ANNtrueDist, RNGtrueDist, cubeAnnTime, cubeRngTime, trueAnnTime, trueRngTime, false, radius, 0, numprobes, i, set->imageAt(centroids[i]), set, projection);
-    }
-    AssignReverse(RNGneighbors, true);
-    //Initialize clusters from DParray structure
-    int *tmp = Cntrds->getCentroids();
-    for(int i=0; i<clusters; i++)
-        images.push_back(std::vector<int>());
-    for(int i=0; i<points; i++)
-        images[DParray[2][i]].push_back(i); //Push image to the centroid with min dist DParray[2][i]
-
-    int loops = 0;
-    int tmpPoint = 0;
-    int changedpoints = set->getNumberOfImages();
-    int floor_changed_points = points - (points*PERCENT_CHANGED_POINTS/100);
-    cout << "Clustering until: changed_points<=" << floor_changed_points << " OR Max_loops=" << MAX_LOOPS << endl;
-
-    //Checking for no-change
-    while(changedpoints>floor_changed_points && loops<MAX_LOOPS){
-        cout << "IN LOOP: " << loops+1 << "/" << MAX_LOOPS << endl;
-        changedpoints = 0;
-        //Clear neighbors
-        for(int i=0; i<RNGneighbors.size(); i++) RNGneighbors[i].clear();
-
-        //Update Centroids from clusters
-        Update();
-
-        // Assignment
-        for(int i=0; i<clusters; i++)
-            hyperCubeSearch(ANNneighbors, RNGneighbors[i], ANNtrueDist, RNGtrueDist, cubeAnnTime, cubeRngTime, trueAnnTime, trueRngTime, false, radius, 0, numprobes, i, &CntrdsVectors[i][0], set, projection);
-        AssignReverse(RNGneighbors, false);
-
-        //Change points from the old cluster to the new
-        for(int i=0; i<clusters; i++){
-            for(int j=0; j<images[i].size(); j++){
-                int newCluster = DParray[2][images[i][j]];
-                if(i!=newCluster){
-                    tmpPoint = images[i][j];
-                    images[i].erase(images[i].begin()+j);
-                    images[newCluster].push_back(tmpPoint);
-                    changedpoints++;
-                }
-            }
-        }
-        cout << "Changed points: " << changedpoints << "\n\n";
-        radius = radius*2;
-        loops++;
-    }
-}
-
 void Clusters::Silhouette(){
     int points = Cntrds->getNumPoints();
     int clusters = Cntrds->getNumClusters();
     double **DParray = Cntrds->getDParray();
     Dataset *set = Cntrds->getSet();
-
     double a;
     double b;
     int index1 = 0;
@@ -562,11 +312,10 @@ void Clusters::Silhouette(){
     cout << "Total Silhouette is: " << result;
 }
 
-void Clusters::Output(char* method, char *output, bool complete, double tClustering, double tSilhouette){
+void Clusters::Output(char *output, double tClustering, double tSilhouette){
     ofstream outfile((char*)output);
     if (outfile.is_open()){
-        outfile << "Algorithm: "<< method << "\n";
-        outfile << "Time Clustering: "<< (double)tClustering << " sec" << "\n";
+        outfile << "Algorithm: Classic\nTime Clustering: "<< (double)tClustering << " sec" << "\n";
         outfile << "Time Silhouette: "<< (double)tSilhouette << " sec"<< "\n";
         for(int i=0; i<CntrdsVectors.size(); i++){
             outfile << "CLUSTER-" << i+1 << " {size: " << images[i].size() << ", centroid: ";
@@ -583,23 +332,6 @@ void Clusters::Output(char* method, char *output, bool complete, double tCluster
             }
             else outfile << "stotal = " << snumbers[i];
         }
-        outfile << "\n\n";
-
-        if(complete){
-            for(int i=0; i<CntrdsVectors.size(); i++){
-                outfile << "CLUSTER-" << i+1 << " { ";
-                for(int j=0; j<CntrdsVectors[i].size(); j++){
-                    outfile << (int)CntrdsVectors[i][j] << " ";
-                }
-                outfile << ", ";
-                for(int j=0; j<images[i].size(); j++){
-                    outfile << images[i][j];
-                    if(j!=images[i].size()-1) outfile << ", ";
-                }
-                outfile << "}\n\n";
-            }
-        }
-
         outfile.close();
     }
     else cout << "Unable to open outout file" << endl;

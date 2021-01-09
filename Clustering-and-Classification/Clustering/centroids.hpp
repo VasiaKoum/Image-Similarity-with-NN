@@ -1,7 +1,8 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
 #include "../Search/dataset.hpp"
-#include "../Search/lshAlgorithms.hpp"
-#include "../Search/projection.hpp"
-#include "../Search/hash.hpp"
+// #include "../../LSH-and-TrueN-Approximation-factor/lshAlgorithms.hpp"
 
 class Centroids{
     double **DParray;
@@ -30,14 +31,11 @@ class Clusters{
 
     public:
         Clusters(Centroids*);
-        void Clustering(char*, char*, bool, int, int, int, int, int);
-        void AssignReverse(std::vector<std::vector<Neighbor>>, bool);
-        void LSHReverseAssignment(int, int, HashTable**);
-        void PROJReverseAssignment(int, int, Projection*);
+        void Clustering(char*);
         void Update();
         void Lloyds();
         void FindNextBest();
         void Silhouette();
-        void Output(char*, char*, bool, double, double);
+        void Output(char*, double, double);
         ~Clusters();
 };

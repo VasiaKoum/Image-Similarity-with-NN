@@ -6,8 +6,7 @@ using namespace std;
 
 int main(int argc, char** argv){
     if (argc>6 && argc<16){
-        char method[] = "Classic";
-        char *I=NULL, *c=NULL, *o=NULL, *n=NULL, *d=NULL, *m = method;
+        char *I=NULL, *c=NULL, *o=NULL, *n=NULL, *d=NULL;
         double R=1.0, exec_time;
         int K=-1, L=3, kLSH=14, M=10, kHYP=3, probes=2;
         bool vars[5] = { 0 };
@@ -106,7 +105,7 @@ int main(int argc, char** argv){
             Centroids centroids(K, numberOfImages, &trainSet);
             centroids.Initialize();
             Clusters clusters(&centroids);
-            clusters.Clustering(m, o, false, L, kLSH, M, kHYP, probes);
+            clusters.Clustering(o);
 
             /* PROGRAM ENDS HERE */
             exec_time = (double)(clock() - tStart)/CLOCKS_PER_SEC;
