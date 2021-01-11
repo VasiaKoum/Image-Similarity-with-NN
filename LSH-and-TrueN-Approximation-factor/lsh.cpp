@@ -9,8 +9,9 @@
 #include "hash.hpp"
 #include "dataset.hpp"
 #include "lshAlgorithms.hpp"
+#include "metrics.hpp"
 #define SWAP_INT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
-// ./lsh -d train-images.idx3-ubyte -R 1.0 -q fileq -k 4 -L 5 -o fileo -N 1
+// ./lsh -d ../Datasets/train-images-idx3-ubyte -i ../Datasets/reduced_dims_trainset -q ../Datasets/t10k-images-idx3-ubyte -s ../Datasets/reduced_dims_testset -k 3 -L 4 -o fileoutlsh
 
 using namespace std;
 
@@ -235,7 +236,9 @@ int main(int argc, char** argv){
                 }
                 clock_t lshAnnStart, lshRngStart, AnnTrueStart, RngTrueStart,AnnTrueRStart;
                 double lshAnnTime, lshRngTime, trueAnnTime, trueRngTime, trueAnnRTime;
+                double approx_lsh = 0, approx_reduced = 0;
                 for(int index=0; index<numberOfImages; index++){
+                    cout << index << endl;
                     vector<Neighbor> ANNneighbors;
                     vector<Neighbor> TrueNeighbors;
                     vector<Neighbor> True_Reduced_Neighbors;
@@ -243,19 +246,19 @@ int main(int argc, char** argv){
 
                     lshAnnStart = clock();
                     ANNsearch(ANNneighbors,L, N, querySet.imageAt(index), hashTables);
-                    lshAnnTime = (double)(clock() - lshAnnStart)/CLOCKS_PER_SEC;
+                    lshAnnTime = lshAnnTime + (double)(clock() - lshAnnStart)/CLOCKS_PER_SEC;
 
                     /////////changes for Reduced//////////////
 
                     AnnTrueRStart = clock();
                     trueDistanceWithNeighbors(True_Reduced_Neighbors, querySetR.imageAt(index), &trainSetR,trainSetR.getNumberOfPixels());
-                    trueAnnRTime = (double)(clock() - AnnTrueStart)/CLOCKS_PER_SEC;
+                    trueAnnRTime = trueAnnRTime + (double)(clock() - AnnTrueStart)/CLOCKS_PER_SEC;
 
                     ///////////////////////////////////////////
 
                     AnnTrueStart = clock();
-                    trueDistanceWithNeighbors(TrueNeighbors, querySet.imageAt(index), &trainSet,trainSet.getNumberOfPixels());
-                    trueAnnTime = (double)(clock() - AnnTrueStart)/CLOCKS_PER_SEC;
+                    trueDistanceWithNeighbors(TrueNeighbors, querySet.imageAt(index), &trainSet, trainSet.getNumberOfPixels());
+                    trueAnnTime = trueAnnTime + (double)(clock() - AnnTrueStart)/CLOCKS_PER_SEC;
 
 
                     int ANNsize = ANNneighbors.size();
@@ -273,7 +276,7 @@ int main(int argc, char** argv){
                         outputf << "Nearest neighbor True: " << TrueNeighbors[TrueNeighbors.size()-1].getIndex() << endl;
                     }
                     if((TrueRsize) > 0){
-                        outputf << "distanceReduced: " << True_Reduced_Neighbors[True_Reduced_Neighbors.size()-1].getDist() << endl;
+                        outputf << "distanceReduced: " << manhattan(querySet.imageAt(index), trainSet.imageAt(True_Reduced_Neighbors[True_Reduced_Neighbors.size()-1].getIndex()), trainSet.getNumberOfPixels()) << endl;
                     }
                     if((ANNsize) > 0){
                         outputf << "distanceLSH: " << ANNneighbors[ANNneighbors.size()-1].getDist() << endl;   
@@ -282,10 +285,7 @@ int main(int argc, char** argv){
                         outputf << "distanceTrue: " << TrueNeighbors[TrueNeighbors.size()-1].getDist() << endl;
                     }
 
-                    outputf << "tReduced: " << trueAnnRTime << endl;
-                    outputf << "tLSH: " << lshAnnTime << endl;
-                    outputf << "tTrue: " << trueAnnTime<< endl<< endl;
-                    outputf << "Approximation Factor: " << "Null"<< endl<< endl;
+                    
                     // lshRngStart = clock();
                     // RNGsearch(RNGneighbors, L, R, querySet.imageAt(index), hashTables);
                     // lshRngTime = (double)(clock() - lshRngStart)/CLOCKS_PER_SEC;
@@ -319,6 +319,12 @@ int main(int argc, char** argv){
                     //     }
                     // }
                 }
+                outputf << "tReduced: " << trueAnnRTime/numberOfImages << endl;
+                outputf << "tLSH: " << lshAnnTime/numberOfImages << endl;
+                outputf << "tTrue: " << trueAnnTime/numberOfImages << endl<< endl;
+                outputf << "Approximation Factor LSH: " <<  approx_lsh/numberOfImages << endl<< endl;
+                outputf << "Approximation Factor Reduced: " << approx_reduced/numberOfImages<< endl<< endl;
+                
                 outputf.close();
 
                 for(int i=0; i<trainSet.getNumberOfPixels(); i++){

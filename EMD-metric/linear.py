@@ -3,9 +3,13 @@ from pulp import *
 import numpy as np
 import pulp as p
 import sys
+import time
 sys.path.insert(1, '../Reduce-Dimensions-Bottleneck-Autoencoder/')
 from functions import numpy_from_dataset
 from math import sqrt
+
+#python3 linear.py -d ../Datasets/train-images-idx3-ubyte -q ../Datasets/t10k-images-idx3-ubyte -l1 ../Datasets/train-labels-idx1-ubyte
+#-l2 ../Datasets/t10k-labels-idx1-ubyte -o results.txt
 
 class cluster:
 
@@ -20,20 +24,25 @@ class cluster:
 def distance(a,b):
     return sqrt(abs(b[0] - a[0])**2 + abs(b[1] - a[1])**2)
 
-output = open("results.txt", "w")
+
 
 if ("-d" in sys.argv and "-q" in sys.argv):
     dataset = sys.argv[sys.argv.index("-d")+1]
     queryset = sys.argv[sys.argv.index("-q")+1]
-    # output_data = sys.argv[sys.argv.index("-od")+1]
-    # output_query = sys.argv[sys.argv.index("-oq")+1]
+    datasetLabels = sys.argv[sys.argv.index("-l1") + 1]
+    querysetLabels = sys.argv[sys.argv.index("-l2") + 1]
+    output_file = sys.argv[sys.argv.index("-o")+1]
 else:
     sys.exit("Wrong or missing parameter. Please execute with: -d dataset -q queryset -od output_data -oq output_query")
 pixels, numarray = numpy_from_dataset(dataset, 4, False)
 qpixels, qnumarray = numpy_from_dataset(queryset, 4, False)
+dataset_labels, numarray_labels = numpy_from_dataset(datasetLabels, 2, False)
+queryset_labels, qnumarray_labels = numpy_from_dataset(querysetLabels, 2, False)
 
-dims = 28
-clusterDim = 7
+output = open(output_file, "w")
+
+dims = numarray[2]
+clusterDim = 4
 step = clusterDim
 
 onetimepass = True
@@ -41,9 +50,15 @@ onetimepass = True
 sizeOfCluster = clusterDim*clusterDim
 num = dims/clusterDim
 
+correct_emd_results = 0
+average_time = 0
+
 for qindex,query in enumerate(qpixels):
     # Consumer
 
+    if qindex == 10:
+        break
+    query_start_time = time.time()
     consumer = np.reshape(query, (-1, dims))
     consumer_clusters = []
     consumer_firstArrays = np.vsplit(consumer, num)
@@ -67,6 +82,9 @@ for qindex,query in enumerate(qpixels):
 
     results = []
     for index,image in enumerate(pixels):
+
+        if index == 100:
+            break
 
         #Producer
         producer = np.reshape(image, (-1, dims))
@@ -121,9 +139,18 @@ for qindex,query in enumerate(qpixels):
         # print(p.value(Lp_prob.objective))
         results.append((index, p.value(Lp_prob.objective)))
 
-    sorted(results, key=lambda x: x[1])
-    print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1], file=output)
-    print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1])
-    break
+    results = sorted(results, key=lambda x: x[1])
+    success = 0
+    for i in range(10):
+        if dataset_labels[results[i][0]][0] == queryset_labels[qindex][0]:
+            success = success + 1
+    correct_emd_results = correct_emd_results + (success/10)
+    query_time = time.time() - query_start_time
+    average_time = average_time + query_time
+    print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1], dataset_labels[results[0][0]][0]  , queryset_labels[qindex][0], file=output)
+    # print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1])
+
+print("Average Correct Search Results EMD: ", correct_emd_results/10)
+print("Average Query Time EMD: ", average_time/10)
 output.close()
 
