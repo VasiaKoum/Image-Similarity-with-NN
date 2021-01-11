@@ -103,32 +103,33 @@ int main(int argc, char** argv){
                 cout << "Program terminates." << endl;
                 return 0;
             }
-            string typecluster = "ORIGINAL SPACE";
-            cout << "-------------------->Begin clustering for original space trainset..." << endl;
-            // Centroids centroids(K, trainSet.getNumberOfImages(), &trainSet);
-            // centroids.Initialize();
-            // Clusters clusters(&centroids);
-            // clusters.Clustering(o, typecluster);
-            cout << "-------------------->End clustering for original space trainset in " << (double)(clock() - tStart)/CLOCKS_PER_SEC << "sec\n" << endl;
 
-            typecluster = "NEW SPACE";
+            string typecluster = "NEW SPACE";
             clock_t tStartNEW = clock();
-            cout << "-------------------->Begin clustering for new space trainset..." << endl;
-            // Centroids centroidsNEW(K, trainSetNEW.getNumberOfImages(), &trainSetNEW);
-            // centroidsNEW.Initialize();
-            // Clusters clustersNEW(&centroidsNEW);
-            // clustersNEW.Clustering(o, typecluster);
-            cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartNEW)/CLOCKS_PER_SEC << "sec" << endl;
+            cout << "-------------------->Begin clustering for " << typecluster << endl;
+            Centroids centroidsNEW(K, trainSetNEW.getNumberOfImages(), &trainSetNEW);
+            centroidsNEW.Initialize();
+            Clusters clustersNEW(&centroidsNEW);
+            clustersNEW.Clustering(o, typecluster);
+            cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartNEW)/CLOCKS_PER_SEC << "sec\n" << endl;
+
+            typecluster = "ORIGINAL SPACE";
+            cout << "\n-------------------->Begin clustering for " << typecluster << endl;
+            Centroids centroids(K, trainSet.getNumberOfImages(), &trainSet);
+            centroids.Initialize();
+            Clusters clusters(&centroids);
+            clusters.Clustering(o, typecluster);
+            cout << "-------------------->End clustering for original space trainset in " << (double)(clock() - tStart)/CLOCKS_PER_SEC << "sec\n" << endl;
 
             typecluster = "CLASSES AS CLUSTERS";
             clock_t tStartClass = clock();
-            cout << "-------------------->Begin clustering for classes as clusters..." << endl;
+            cout << "-------------------->Begin clustering for " << typecluster << endl;
             vector<vector<int>> images = readClassFile(n);
             int points = 0;
             for(int i=0; i<images.size(); i++) points+=images[i].size();
             Centroids centroidsClass(K, points, &trainSet);
             Clusters clustersClass(&centroidsClass);
-            clustersClass.ClusteringClass(images, o, typecluster);
+            clustersClass.Clustering(images, o, typecluster);
             cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartClass)/CLOCKS_PER_SEC << "sec" << endl;
 
             /* PROGRAM ENDS HERE */

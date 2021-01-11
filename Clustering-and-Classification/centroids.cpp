@@ -34,6 +34,33 @@ Centroids::~Centroids(){
     delete[] centroids;
 }
 
+double Centroids::minDist(vector<vector<unsigned short>> CntrdsVectors){
+    double manh, sum=0;
+    for(int i=0; i<numpoints; i++){
+        DParray[0][i] = DBL_MAX; DParray[3][i] = DBL_MAX;
+        for(int j=0; j<CntrdsVectors.size(); j++){
+            manh = manhattan(set->imageAt(i), &CntrdsVectors[j][0], set->dimension());
+            if(manh<DParray[0][i]){
+                if(DParray[0][i]<DParray[3][i]){
+                    DParray[3][i] = DParray[0][i];
+                    DParray[4][i] = DParray[2][i];
+                }
+                DParray[0][i] = manh;
+                DParray[2][i] = j;
+            }
+            else{
+                if(manh<DParray[3][i]){
+                    DParray[3][i] = manh;
+                    DParray[4][i] = j;
+                }
+            }
+
+        }
+        sum+=DParray[0][i];
+    }
+    return sum;
+}
+
 double Centroids::minmaxDist(int lastcentroid, unsigned short* otherCentroid){
     double manh = 0.0, max = 0.0;
     unsigned short* pointCentroid = NULL;
@@ -120,15 +147,13 @@ Clusters::Clusters(Centroids* argCntrds) : Cntrds(argCntrds){}
 
 void Clusters::Clustering(char* output, string typecluster){
     clock_t tStart, tClustering, tSilhouette;
-    cout << "Begin clustering with Classic method for: "  << Cntrds->getNumPoints() << " points." << endl;
+    cout << "Begin clustering with Classic method for: " << Cntrds->getNumPoints() << " points." << endl;
     tStart = clock();
     Lloyds();
     tClustering = (double)(clock() - tStart)/CLOCKS_PER_SEC;
     cout << "Time of clustering: " << (double)tClustering << endl;
-    tStart = clock();
     // Silhouette();
-    tSilhouette = (double)(clock() - tStart)/CLOCKS_PER_SEC;
-    Output(output, tClustering, tSilhouette, typecluster);
+    Output(output, tClustering, typecluster, ObjectiveFunction());
 }
 
 //Update
@@ -218,14 +243,13 @@ void Clusters::Lloyds(){
     }
 }
 
-void Clusters::ClusteringClass(vector<vector<int>> argimages, char* output, string typecluster){
+void Clusters::Clustering(vector<vector<int>> argimages, char* output, string typecluster){
     double **DParray = Cntrds->getDParray();
     int numclusters = Cntrds->getNumClusters();
     images = argimages;
     Update();
-    for(int i=1; i<numclusters; i++) Cntrds->minmaxDist(i-1, NULL);
     // Silhouette();
-    Output(output, 0, 0, typecluster);
+    Output(output, 0, typecluster, Cntrds->minDist(CntrdsVectors));
 }
 
 void Clusters::Silhouette(){
@@ -283,24 +307,26 @@ void Clusters::Silhouette(){
     cout << "Total Silhouette is: " << result;
 }
 
-void Clusters::ObjectiveFunction(){
-    
+double Clusters::ObjectiveFunction(){
+    int points = Cntrds->getNumPoints();
+    double **DParray = Cntrds->getDParray(), sum=0;
+    for(int i=0; i<points; i++) sum+=DParray[0][i];
+    return sum;
 }
 
-void Clusters::Output(char *output, double tClustering, double tSilhouette, string typecluster){
-    ofstream outfile((char*)output);
+void Clusters::Output(char *output, double tClustering, string typecluster, double objectiveSum){
+    ofstream outfile((char*)output, ios::app);
     if (outfile.is_open()){
-        // outfile << "Algorithm: Classic\nTime Clustering: "<< (double)tClustering << " sec" << "\n";
-        // outfile << "Time Silhouette: "<< (double)tSilhouette << " sec"<< "\n";
-        // outfile << typecluster << "\n";
+        outfile << typecluster << endl;
         if(typecluster.compare("CLASSES AS CLUSTERS") != 0){
             for(int i=0; i<CntrdsVectors.size(); i++){
                 outfile << "CLUSTER-" << i+1 << " {size: " << images[i].size() << ", centroid: ";
                 for(int j=0; j<CntrdsVectors[i].size(); j++){
                     outfile << (int)CntrdsVectors[i][j] << " ";
                 }
-                outfile << "}\n\n";
+                outfile << "}" << endl;
             }
+            outfile << "clustering_time: "<< (double)tClustering << endl;
         }
 
         //Silhouette
@@ -313,14 +339,14 @@ void Clusters::Output(char *output, double tClustering, double tSilhouette, stri
         }
 
         //Objective Function
+        outfile << "Value of Objective Function: "<< objectiveSum << "\n\n";
+
         outfile.close();
     }
     else cout << "Unable to open outout file" << endl;
 }
 
-Clusters::~Clusters(){
-
-}
+Clusters::~Clusters(){}
 
 void updateDataset(Dataset *trainSet, char *I, int numBytes){
     fstream trainInput(I);

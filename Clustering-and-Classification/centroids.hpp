@@ -21,6 +21,7 @@ class Centroids{
         int getNumPoints() { return numpoints; }
         Dataset* getSet() { return set; }
         double minmaxDist(int, unsigned short*);
+        double minDist(std::vector<std::vector<unsigned short>>);
         void Initialize();
 };
 
@@ -33,12 +34,12 @@ class Clusters{
     public:
         Clusters(Centroids*);
         void Clustering(char*, std::string);
-        void ClusteringClass(std::vector<std::vector<int>>, char*, std::string);
+        void Clustering(std::vector<std::vector<int>>, char*, std::string);
         void Update();
         void Lloyds();
         void Silhouette();
-        void ObjectiveFunction();
-        void Output(char*, double, double, std::string);
+        double ObjectiveFunction();
+        void Output(char*, double, std::string, double);
         ~Clusters();
 };
 
