@@ -1,12 +1,11 @@
-#include <string.h>
 #include <time.h>
 #include <random>
 #include <cfloat>
 #include <algorithm>
-#include "../Search/metrics.hpp"
+#include "../LSH-and-TrueN-Approximation-factor/metrics.hpp"
 #include "centroids.hpp"
 #define PERCENT_CHANGED_POINTS 99
-#define MAX_LOOPS 12
+#define MAX_LOOPS 1
 #define RADIUS 8000
 #define W 40000
 
@@ -35,9 +34,9 @@ Centroids::~Centroids(){
     delete[] centroids;
 }
 
-double Centroids::minmaxDist(int lastcentroid, unsigned char* otherCentroid){
+double Centroids::minmaxDist(int lastcentroid, unsigned short* otherCentroid){
     double manh = 0.0, max = 0.0;
-    unsigned char* pointCentroid = NULL;
+    unsigned short* pointCentroid = NULL;
     bool assignment=false;
     if(otherCentroid == NULL) pointCentroid = set->imageAt(centroids[lastcentroid]);
     else{
@@ -119,7 +118,7 @@ void Centroids::Initialize(){
 
 Clusters::Clusters(Centroids* argCntrds) : Cntrds(argCntrds){}
 
-void Clusters::Clustering(char* output){
+void Clusters::Clustering(char* output, string typecluster){
     clock_t tStart, tClustering, tSilhouette;
     cout << "Begin clustering with Classic method for: "  << Cntrds->getNumPoints() << " points." << endl;
     tStart = clock();
@@ -129,7 +128,7 @@ void Clusters::Clustering(char* output){
     tStart = clock();
     // Silhouette();
     tSilhouette = (double)(clock() - tStart)/CLOCKS_PER_SEC;
-    Output(output, tClustering, tSilhouette);
+    Output(output, tClustering, tSilhouette, typecluster);
 }
 
 //Update
@@ -138,9 +137,9 @@ void Clusters::Update(){
     int clusters = Cntrds->getNumClusters();
     int *centroids = Cntrds->getCentroids();
     CntrdsVectors.clear();
-    vector<unsigned char> newCentroid;
+    vector<unsigned short> newCentroid;
     vector<double> findmedian;
-    unsigned char* tmp = NULL;
+    unsigned short* tmp = NULL;
 
     for(int i=0; i<clusters; i++){
         cout << "In cluster: " << i << endl;
@@ -219,42 +218,14 @@ void Clusters::Lloyds(){
     }
 }
 
-void Clusters::FindNextBest(){
-    int points = Cntrds->getNumPoints();
-    int clusters = Cntrds->getNumClusters();
+void Clusters::ClusteringClass(vector<vector<int>> argimages, char* output, string typecluster){
     double **DParray = Cntrds->getDParray();
-    Dataset *set = Cntrds->getSet();
-    double min1, min2, manh;
-    int index1, index2;
-
-    for(int i=0; i<points; i++){
-        min1 = DBL_MAX, min2 = DBL_MAX;
-        for(int j=0; j<clusters; j++){
-            manh = manhattan(set->imageAt(i), &CntrdsVectors[j][0], set->dimension());
-            if(manh<min1){
-                if(min1<min2){
-                    min2 = min1;
-                    index2 = index1;
-                }
-                min1 = manh;
-                index1 = j;
-            }
-            else{
-                if(manh<min2){
-                    min2 = manh;
-                    index2 = j;
-                }
-            }
-        }
-        if(DParray[0][i]!=min1){
-            DParray[3][i] = min1;
-            DParray[4][i] = index1;
-        }
-        else{
-            DParray[3][i] = min2;
-            DParray[4][i] = index2;
-        }
-    }
+    int numclusters = Cntrds->getNumClusters();
+    images = argimages;
+    Update();
+    for(int i=1; i<numclusters; i++) Cntrds->minmaxDist(i-1, NULL);
+    // Silhouette();
+    Output(output, 0, 0, typecluster);
 }
 
 void Clusters::Silhouette(){
@@ -268,7 +239,7 @@ void Clusters::Silhouette(){
     int index2 = 0;
     double manh = 0, sum_a = 0, sum_b = 0, totalsum = 0, clusterssum = 0, max = 0, result = 0;
 
-    cout << "\nBegin silhouette with for: "  << points << " points." << endl;
+    cout << "\nBegin silhouette for: "  << points << " points." << endl;
     for(int i=0; i<images.size(); i++){
         cout << "CLUSTER " << i << "/" << images.size() << endl;
         clusterssum = 0;
@@ -312,26 +283,36 @@ void Clusters::Silhouette(){
     cout << "Total Silhouette is: " << result;
 }
 
-void Clusters::Output(char *output, double tClustering, double tSilhouette){
+void Clusters::ObjectiveFunction(){
+    
+}
+
+void Clusters::Output(char *output, double tClustering, double tSilhouette, string typecluster){
     ofstream outfile((char*)output);
     if (outfile.is_open()){
-        outfile << "Algorithm: Classic\nTime Clustering: "<< (double)tClustering << " sec" << "\n";
-        outfile << "Time Silhouette: "<< (double)tSilhouette << " sec"<< "\n";
-        for(int i=0; i<CntrdsVectors.size(); i++){
-            outfile << "CLUSTER-" << i+1 << " {size: " << images[i].size() << ", centroid: ";
-            for(int j=0; j<CntrdsVectors[i].size(); j++){
-                outfile << (int)CntrdsVectors[i][j] << " ";
+        // outfile << "Algorithm: Classic\nTime Clustering: "<< (double)tClustering << " sec" << "\n";
+        // outfile << "Time Silhouette: "<< (double)tSilhouette << " sec"<< "\n";
+        // outfile << typecluster << "\n";
+        if(typecluster.compare("CLASSES AS CLUSTERS") != 0){
+            for(int i=0; i<CntrdsVectors.size(); i++){
+                outfile << "CLUSTER-" << i+1 << " {size: " << images[i].size() << ", centroid: ";
+                for(int j=0; j<CntrdsVectors[i].size(); j++){
+                    outfile << (int)CntrdsVectors[i][j] << " ";
+                }
+                outfile << "}\n\n";
             }
-            outfile << "}\n\n";
         }
 
         //Silhouette
         for(int i=0; i<snumbers.size(); i++){
+            outfile << "Silhouette: [";
             if(i!=snumbers.size()-1){
-                outfile << "s" << i << "=" << snumbers[i] << ", ";
+                outfile << snumbers[i] << ", ";
             }
-            else outfile << "stotal = " << snumbers[i];
+            else outfile << snumbers[i] << "]\n";
         }
+
+        //Objective Function
         outfile.close();
     }
     else cout << "Unable to open outout file" << endl;
@@ -339,4 +320,56 @@ void Clusters::Output(char *output, double tClustering, double tSilhouette){
 
 Clusters::~Clusters(){
 
+}
+
+void updateDataset(Dataset *trainSet, char *I, int numBytes){
+    fstream trainInput(I);
+    if(!trainInput.is_open()){
+        cerr<<"Failed to open input data."<<endl;
+        return;
+    }
+    unsigned short *tmp = trainSet->imageAt(0);
+    unsigned short bigEndShort = 0, littleEndShort = 0;
+    for (int i=0; i<trainSet->getNumberOfPixels()*trainSet->getNumberOfImages(); i++){
+        bigEndShort = 0;
+        trainInput.read((char*)&bigEndShort, numBytes);
+        littleEndShort = (bigEndShort>>8) | ((bigEndShort<<8));
+        if (numBytes==1) memcpy(tmp, &bigEndShort, sizeof(littleEndShort));
+        else memcpy(tmp, &littleEndShort, sizeof(littleEndShort));
+        tmp++;
+    }
+    trainInput.close();
+}
+
+vector<vector<int>> readClassFile(char *n){
+    vector<vector<int>> images;
+    fstream classesFile(n);
+    if(!classesFile.is_open()){
+        cerr<<"Failed to open " << n <<endl;
+        return images;
+    }
+    string line;
+    int points=0;
+    while(getline(classesFile, line, '\n')){
+        images.push_back(std::vector<int>());
+        string delimiter = "CLUSTER-";
+        string token = line.substr(line.find(delimiter)+delimiter.length(), line.find(delimiter)+delimiter.length());
+        int clusternum = (int)line.at(line.find(delimiter)+delimiter.length())-48;
+        delimiter = "size: ";
+        line.pop_back();
+        token = line.substr(line.find(delimiter)+delimiter.length(), line.size()-1);
+        istringstream is_line(token);
+        string imagenum;
+        int indexat=0, clustersize=0;
+        while(getline(is_line, imagenum, ',')){
+            if(indexat!=0) images[clusternum].push_back(stoi(imagenum));
+            else{
+                clustersize=stoi(imagenum);
+                points+=clustersize;
+            }
+            indexat++;
+        }
+    }
+    classesFile.close();
+    return images;
 }

@@ -1,5 +1,4 @@
 #include <string.h>
-#include <sstream>
 #include "centroids.hpp"
 #define SWAP_INT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
 using namespace std;
@@ -39,14 +38,11 @@ int main(int argc, char** argv){
             return 0;
         }
         else{
-
-            /* PROGRAM STARTS HERE */
             clock_t tStart = clock();
-
             unsigned int magicNumber = 0, numberOfImages = 0, numberOfRows = 0, numberOfColumns = 0, img=0;
 
-            //Open train file
-            fstream trainInput(I);
+            //Open train file-ORIGINAL SPACE
+            fstream trainInput(d);
             if(!trainInput.is_open()){
                 cerr<<"Failed to open input data."<<endl;
                 return 0;
@@ -55,16 +51,23 @@ int main(int argc, char** argv){
             trainInput.read((char*)&numberOfImages, 4);
             trainInput.read((char*)&numberOfRows, 4);
             trainInput.read((char*)&numberOfColumns, 4);
-
-            //Convert intergers from Big Endian to Little Endian
-
-            magicNumber = SWAP_INT32(magicNumber);
-            numberOfImages = SWAP_INT32(numberOfImages);
-            numberOfRows = SWAP_INT32(numberOfRows);
-            numberOfColumns = SWAP_INT32(numberOfColumns);
-            Dataset trainSet(magicNumber, numberOfImages, numberOfColumns, numberOfRows);
-            trainInput.read((char*)trainSet.imageAt(0), (trainSet.getNumberOfPixels())*(trainSet.getNumberOfImages()));
             trainInput.close();
+            Dataset trainSet(SWAP_INT32(magicNumber), SWAP_INT32(numberOfImages), SWAP_INT32(numberOfColumns), SWAP_INT32(numberOfRows));
+            updateDataset(&trainSet, d, 1);
+
+            //Open train file-NEW SPACE
+            fstream trainInputNEW(I);
+            if(!trainInputNEW.is_open()){
+                cerr<<"Failed to open input data."<<endl;
+                return 0;
+            }
+            trainInputNEW.read((char*)&magicNumber, 4);
+            trainInputNEW.read((char*)&numberOfImages, 4);
+            trainInputNEW.read((char*)&numberOfRows, 4);
+            trainInputNEW.read((char*)&numberOfColumns, 4);
+            trainInputNEW.close();
+            Dataset trainSetNEW(SWAP_INT32(magicNumber), SWAP_INT32(numberOfImages), SWAP_INT32(numberOfColumns), SWAP_INT32(numberOfRows));
+            updateDataset(&trainSetNEW, I, 2);
 
             //Open configuration file
             fstream configuration(c);
@@ -74,7 +77,6 @@ int main(int argc, char** argv){
             }
             else{
                 string line;
-                int i=0;
                 while(getline(configuration, line, '\n')){
                     istringstream is_line(line);
                     string type;
@@ -101,11 +103,33 @@ int main(int argc, char** argv){
                 cout << "Program terminates." << endl;
                 return 0;
             }
+            string typecluster = "ORIGINAL SPACE";
+            cout << "-------------------->Begin clustering for original space trainset..." << endl;
+            // Centroids centroids(K, trainSet.getNumberOfImages(), &trainSet);
+            // centroids.Initialize();
+            // Clusters clusters(&centroids);
+            // clusters.Clustering(o, typecluster);
+            cout << "-------------------->End clustering for original space trainset in " << (double)(clock() - tStart)/CLOCKS_PER_SEC << "sec\n" << endl;
 
-            Centroids centroids(K, numberOfImages, &trainSet);
-            centroids.Initialize();
-            Clusters clusters(&centroids);
-            clusters.Clustering(o);
+            typecluster = "NEW SPACE";
+            clock_t tStartNEW = clock();
+            cout << "-------------------->Begin clustering for new space trainset..." << endl;
+            // Centroids centroidsNEW(K, trainSetNEW.getNumberOfImages(), &trainSetNEW);
+            // centroidsNEW.Initialize();
+            // Clusters clustersNEW(&centroidsNEW);
+            // clustersNEW.Clustering(o, typecluster);
+            cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartNEW)/CLOCKS_PER_SEC << "sec" << endl;
+
+            typecluster = "CLASSES AS CLUSTERS";
+            clock_t tStartClass = clock();
+            cout << "-------------------->Begin clustering for classes as clusters..." << endl;
+            vector<vector<int>> images = readClassFile(n);
+            int points = 0;
+            for(int i=0; i<images.size(); i++) points+=images[i].size();
+            Centroids centroidsClass(K, points, &trainSet);
+            Clusters clustersClass(&centroidsClass);
+            clustersClass.ClusteringClass(images, o, typecluster);
+            cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartClass)/CLOCKS_PER_SEC << "sec" << endl;
 
             /* PROGRAM ENDS HERE */
             exec_time = (double)(clock() - tStart)/CLOCKS_PER_SEC;
@@ -113,6 +137,6 @@ int main(int argc, char** argv){
         }
     }
     else{
-cout << "You must run the program with parameters: -d <input file original space> -i <input file new space> -n <classes from NN as clusters> -c <configuration file> -o <output file>" << endl;
+        cout << "You must run the program with parameters: -d <input file original space> -i <input file new space> -n <classes from NN as clusters> -c <configuration file> -o <output file>" << endl;
     }
 }
