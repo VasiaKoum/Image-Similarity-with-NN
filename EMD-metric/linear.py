@@ -13,15 +13,16 @@ from math import sqrt
 
 class cluster:
 
-    def __init__(self, i,j, array, dimSize):
+    def __init__(self, i,j, array, dimSize, sum_pixels):
         self.x = i
         self.y = j
         self.dimSize = dimSize
         self.array = array
-        self.weight = np.sum(array)
+        self.weight = int((np.sum(array)/sum_pixels)*100)
         self.center = (i*dimSize + (dimSize/2), j*dimSize + (dimSize/2))
 
 def distance(a,b):
+    # return np.linalg.norm(np.array([a[0], a[1]] - np.array([b[0], b[1]])))
     return sqrt(abs(b[0] - a[0])**2 + abs(b[1] - a[1])**2)
 
 
@@ -38,7 +39,6 @@ pixels, numarray = numpy_from_dataset(dataset, 4, False)
 qpixels, qnumarray = numpy_from_dataset(queryset, 4, False)
 dataset_labels, numarray_labels = numpy_from_dataset(datasetLabels, 2, False)
 queryset_labels, qnumarray_labels = numpy_from_dataset(querysetLabels, 2, False)
-
 output = open(output_file, "w")
 
 dims = numarray[2]
@@ -52,22 +52,34 @@ num = dims/clusterDim
 
 correct_emd_results = 0
 average_time = 0
+# print(np.sum(qpixels[0]),np.sum(qpixels[1]))
+
 
 for qindex,query in enumerate(qpixels):
     # Consumer
 
+
+    sum_consumer = np.sum(query)
     if qindex == 10:
         break
+
     query_start_time = time.time()
     consumer = np.reshape(query, (-1, dims))
     consumer_clusters = []
+    sum_consumer_100 = 0
+
     consumer_firstArrays = np.vsplit(consumer, num)
     for i, array in enumerate(consumer_firstArrays):
         consumer_secondArrays = np.hsplit(array, num)
         ylist = []
         for j, ar in enumerate(consumer_secondArrays):
-            ylist.append(cluster(i, j, ar, clusterDim))
+            new_cluster = cluster(i, j, ar, clusterDim,sum_consumer)
+            sum_consumer_100 = sum_consumer_100 + new_cluster.weight
+            ylist.append(new_cluster)
+
         consumer_clusters.append(ylist)
+    dif = sum_consumer_100 - 100
+    consumer_clusters[1][0].weight += dif
 
     if onetimepass:
         costs = []
@@ -76,7 +88,8 @@ for qindex,query in enumerate(qpixels):
                 costsy = []
                 for z in range(0, len(consumer_clusters)):
                     for h in range(0, len(consumer_clusters[z])):
-                       costsy.append(distance(consumer_clusters[x][y].center,consumer_clusters[z][h].center))
+                        costsy.append(distance(consumer_clusters[x][y].center,consumer_clusters[z][h].center))
+                # print(len(costsy), costsy)
                 costs.append(costsy)
         onetimepass = False
 
@@ -85,7 +98,8 @@ for qindex,query in enumerate(qpixels):
 
         if index == 100:
             break
-
+        sum_producer = np.sum(image)
+        sum_producer_100 = 0
         #Producer
         producer = np.reshape(image, (-1, dims))
         producer_clusters = []
@@ -94,11 +108,14 @@ for qindex,query in enumerate(qpixels):
             producer_secondArrays = np.hsplit(array, num)
             ylist = []
             for j,ar in enumerate(producer_secondArrays):
-                ylist.append(cluster(i,j,ar, clusterDim))
+                new_cluster = cluster(i, j, ar, clusterDim, sum_producer)
+                sum_producer_100 = sum_producer_100 + new_cluster.weight
+                ylist.append(new_cluster)
             producer_clusters.append(ylist)
             # center in cluster = (x*i + mx, y*j + my)
             #weight is np.sum(producer_clusters[0][0])
-
+        dif = sum_producer_100 - 100
+        producer_clusters[1][0].weight += dif
         Lp_prob = p.LpProblem('Problem', p.LpMinimize)
 
         xs = [LpVariable("x{}".format(i + 1), lowBound=0) for i in range(int(num)**2)]
@@ -112,7 +129,7 @@ for qindex,query in enumerate(qpixels):
                 statement += costs[i][j] * xys[i][j]
         Lp_prob += statement
 
-        #producer constraints
+        #constraints
         for i in range(int(num)):
             for j in range(int(num)):
                 statement1 = 0
@@ -137,13 +154,18 @@ for qindex,query in enumerate(qpixels):
         status = Lp_prob.solve(PULP_CBC_CMD(msg=False))
         # print(p.LpStatus[status])
         # print(p.value(Lp_prob.objective))
-        results.append((index, p.value(Lp_prob.objective)))
+        # print(index, p.value(Lp_prob.objective))
+        results.append((index, p.value(Lp_prob.objective.value())))
 
     results = sorted(results, key=lambda x: x[1])
     success = 0
     for i in range(10):
         if dataset_labels[results[i][0]][0] == queryset_labels[qindex][0]:
             success = success + 1
+            # print("SAME ", results[i][1], dataset_labels[results[i][0]][0], queryset_labels[qindex][0])
+        # else:
+        #     print(results[i][1], dataset_labels[results[i][0]][0], queryset_labels[qindex][0])
+    # print("RESULTS \n", results)
     correct_emd_results = correct_emd_results + (success/10)
     query_time = time.time() - query_start_time
     average_time = average_time + query_time

@@ -236,7 +236,7 @@ int main(int argc, char** argv){
                 }
                 clock_t lshAnnStart, lshRngStart, AnnTrueStart, RngTrueStart,AnnTrueRStart;
                 double lshAnnTime, lshRngTime, trueAnnTime, trueRngTime, trueAnnRTime;
-                double approx_lsh = 0, approx_reduced = 0;
+                double approx_lsh = 0, approx_reduced = 0, tempReduced = 0, tempLsh = 0;
                 for(int index=0; index<numberOfImages; index++){
                     cout << index << endl;
                     vector<Neighbor> ANNneighbors;
@@ -265,7 +265,7 @@ int main(int argc, char** argv){
                     int TrueSize = TrueNeighbors.size();
                     int TrueRsize = True_Reduced_Neighbors.size();
                     outputf << "Query: " << index << endl;
-
+                
                     if((TrueRsize) > 0){
                         outputf << "Nearest neighbor Reduced: " << True_Reduced_Neighbors[True_Reduced_Neighbors.size()-1].getIndex() << endl;
                     }
@@ -276,15 +276,19 @@ int main(int argc, char** argv){
                         outputf << "Nearest neighbor True: " << TrueNeighbors[TrueNeighbors.size()-1].getIndex() << endl;
                     }
                     if((TrueRsize) > 0){
-                        outputf << "distanceReduced: " << manhattan(querySet.imageAt(index), trainSet.imageAt(True_Reduced_Neighbors[True_Reduced_Neighbors.size()-1].getIndex()), trainSet.getNumberOfPixels()) << endl;
+                        tempReduced =  manhattan(querySet.imageAt(index), trainSet.imageAt(True_Reduced_Neighbors[True_Reduced_Neighbors.size()-1].getIndex()), trainSet.getNumberOfPixels());
+                        outputf << "distanceReduced: " << tempReduced << endl;
                     }
                     if((ANNsize) > 0){
-                        outputf << "distanceLSH: " << ANNneighbors[ANNneighbors.size()-1].getDist() << endl;   
+                        tempLsh = ANNneighbors[ANNneighbors.size()-1].getDist();
+                        outputf << "distanceLSH: " << tempLsh << endl;   
                     } 
                     if((TrueSize) > 0){
+                        approx_reduced = approx_reduced + (tempReduced/TrueNeighbors[TrueNeighbors.size()-1].getDist());
+                        approx_lsh =  approx_lsh + (tempLsh/TrueNeighbors[TrueNeighbors.size()-1].getDist());
+
                         outputf << "distanceTrue: " << TrueNeighbors[TrueNeighbors.size()-1].getDist() << endl;
                     }
-
                     
                     // lshRngStart = clock();
                     // RNGsearch(RNGneighbors, L, R, querySet.imageAt(index), hashTables);
@@ -322,8 +326,8 @@ int main(int argc, char** argv){
                 outputf << "tReduced: " << trueAnnRTime/numberOfImages << endl;
                 outputf << "tLSH: " << lshAnnTime/numberOfImages << endl;
                 outputf << "tTrue: " << trueAnnTime/numberOfImages << endl<< endl;
-                outputf << "Approximation Factor LSH: " <<  approx_lsh/numberOfImages << endl<< endl;
-                outputf << "Approximation Factor Reduced: " << approx_reduced/numberOfImages<< endl<< endl;
+                outputf << "Approximation Factor LSH: " <<  (double)approx_lsh/(double)numberOfImages << endl<< endl;
+                outputf << "Approximation Factor Reduced: " << (double)approx_reduced/(double)numberOfImages<< endl<< endl;
                 
                 outputf.close();
 
