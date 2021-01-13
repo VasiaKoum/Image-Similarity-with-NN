@@ -3,13 +3,36 @@ import numpy as np
 import pulp as p
 import sys
 import time
-sys.path.insert(1, '../Reduce-Dimensions-Bottleneck-Autoencoder/')
-from functions import numpy_from_dataset
+from itertools import zip_longest
+# sys.path.insert(1, '../Reduce-Dimensions-Bottleneck-Autoencoder/')
+# from functions import numpy_from_dataset
 from math import sqrt
 
 #python3 linear.py -d ../Datasets/train-images-idx3-ubyte -q ../Datasets/t10k-images-idx3-ubyte -l1 ../Datasets/train-labels-idx1-ubyte
 #-l2 ../Datasets/t10k-labels-idx1-ubyte -o results.txt
 
+def numpy_from_dataset(inputpath, numbers, per_2_bytes):
+    pixels = []
+    numarray = []
+    with open(inputpath, "rb") as file:
+        for x in range(numbers):
+            numarray.append(int.from_bytes(file.read(4), byteorder='big'))
+        # 2d numpy array for images->pixels
+        if numbers == 4:
+            if per_2_bytes:
+                data = file.read(2)
+                while data:
+                    pixels.append(int.from_bytes(data, byteorder='big'))
+                    data = file.read(2)
+                pixels = np.array(list(bytes_group(numarray[3], pixels, fillvalue=0)))
+            else:
+                pixels = np.array(list(bytes_group(numarray[2]*numarray[3], file.read(), fillvalue=0)))
+        elif numbers == 2:
+            pixels = np.array(list(bytes_group(1, file.read(), fillvalue=0)))
+    return pixels, numarray
+
+def bytes_group(n, iterable, fillvalue=None):
+    return zip_longest(*[iter(iterable)]*n, fillvalue=fillvalue)
 
 class cluster:
 
@@ -43,7 +66,7 @@ queryset_labels, qnumarray_labels = numpy_from_dataset(querysetLabels, 2, False)
 
 clusterDim = 7 #cluster dimension n (nxn)
 
-output = open(output_file, "w")
+output = open(output_file, "a")
 dims = numarray[2]
 step = clusterDim
 
@@ -166,9 +189,11 @@ for qindex,query in enumerate(qpixels):
     correct_emd_results = correct_emd_results + (success/10)
     query_time = time.time() - query_start_time
     average_time = average_time + query_time
-    print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1], dataset_labels[results[0][0]][0]  , queryset_labels[qindex][0], file=output)
+    # print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1], dataset_labels[results[0][0]][0]  , queryset_labels[qindex][0], file=output)
 
 print("Average Correct Search Results EMD: ", correct_emd_results/10)
 print("Average Query Time EMD: ", average_time/10)
+print("Average Correct Search Results EMD: ", correct_emd_results/10, file=output)
+print("Average Query Time EMD: ", average_time/10, file=output)
 output.close()
 
