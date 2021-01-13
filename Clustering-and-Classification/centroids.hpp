@@ -39,6 +39,7 @@ class Clusters{
         void Lloyds();
         void Silhouette();
         double ObjectiveFunction();
+        void writeLabels(std::string);
         void Output(char*, double, std::string, double);
         ~Clusters();
 };

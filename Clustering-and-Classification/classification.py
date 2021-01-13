@@ -7,8 +7,8 @@ from keras.optimizers import RMSprop
 import matplotlib.pyplot as plt
 from functions import *
 
-# A part hyperparameters -> number of layers, filter size, number of filters/layer, number of epochs, batch size
-#python classification.py -d ../Datasets/train-images-idx3-ubyte -dl ../Datasets/train-labels-idx1-ubyte -t ../Datasets/t10k-images-idx3-ubyte -tl ../Datasets/t10k-labels-idx1-ubyte -model ./Models/L4_FS3_FL32_E200_B64
+# A part hyperparameters -> number of layers, filter size, number of filters/layer, number of epochs, batch size, latent vector
+#python classification.py -d ../Datasets/train-images-idx3-ubyte -dl ../Datasets/train-labels-idx1-ubyte -t ../Datasets/t10k-images-idx3-ubyte -tl ../Datasets/t10k-labels-idx1-ubyte -model ../Models/L4_FS3_FL32_E200_B64
 
 def main():
     argcheck = []
@@ -56,8 +56,6 @@ def main():
     binary_train_label = labels_to_binary(train_labels, 10)
     binary_test_label = labels_to_binary(test_labels, 10)
     train_X, valid_X, train_label, valid_label = train_test_split(train_pixels, binary_train_label, test_size=0.2, random_state=13)
-    print("Original label: ", train_labels[0])
-    print('After conversion to one-hot: ', binary_train_label[0])
 
     if len(train_numarray) != 4 or len(train_pixels) == 0:
         sys.exit("Input dataset does not have the required number of values")
@@ -69,7 +67,6 @@ def main():
         sys.exit("Input dataset does not have the required number of values")
 
     #convert label set to boolean labels
-
     print("Data ready in numpy array!\n")
     df = classification_values_df()
     hypernames = ["Layers", "Fc_units", "Epochs", "Batch_Size"]
@@ -125,7 +122,7 @@ def main():
             labels_indexes[value].append(i)
         fileNN = open("classes", 'w')
         for i, value in enumerate(labels_indexes):
-            fileNN.write("CLUSTER-"+str(i)+" { size: "+str(len(value))+", "+','.join(str(x) for x in value)+"}\n")
+            fileNN.write("CLUSTER-"+str(i)+" { size: "+str(len(value))+","+','.join(str(x) for x in value)+"}\n")
         fileNN.close()
 
         print_predictions_numbers(test_labels, predicted_labels)

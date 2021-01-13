@@ -7,7 +7,7 @@ int main(int argc, char** argv){
     if (argc>6 && argc<16){
         char *I=NULL, *c=NULL, *o=NULL, *n=NULL, *d=NULL;
         double R=1.0, exec_time;
-        int K=-1, L=3, kLSH=14, M=10, kHYP=3, probes=2;
+        int K=-1, L=3, kLSH=14;
         bool vars[5] = { 0 };
         for (int i=0; i<5; i++) vars[i] = true;
         for (int i=0; i<argc; i++){
@@ -89,9 +89,6 @@ int main(int argc, char** argv){
                             if(type.compare("number_of_clusters:")==0) K = stoi(number);
                             else if(type.compare("number_of_vector_hash_tables:")==0) L = stoi(number);
                             else if(type.compare("number_of_vector_hash_functions:")==0) kLSH = stoi(number);
-                            else if(type.compare("max_number_M_hypercube:")==0) M = stoi(number);
-                            else if(type.compare("number_of_hypercube_dimensions:")==0) kHYP = stoi(number);
-                            else if(type.compare("number_of_probes:")==0) probes = stoi(number);
                         }
                     }
                 }
@@ -114,7 +111,7 @@ int main(int argc, char** argv){
             cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartNEW)/CLOCKS_PER_SEC << "sec\n" << endl;
 
             typecluster = "ORIGINAL SPACE";
-            cout << "\n-------------------->Begin clustering for " << typecluster << endl;
+            cout << "-------------------->Begin clustering for " << typecluster << endl;
             Centroids centroids(K, trainSet.getNumberOfImages(), &trainSet);
             centroids.Initialize();
             Clusters clusters(&centroids);
@@ -131,6 +128,16 @@ int main(int argc, char** argv){
             Clusters clustersClass(&centroidsClass);
             clustersClass.Clustering(images, o, typecluster);
             cout << "-------------------->End clustering for new space trainset in " << (double)(clock() - tStartClass)/CLOCKS_PER_SEC << "sec" << endl;
+
+            string answer;
+            cout << "Do you want statistics to be created for the correctness of the labels for the 3 clusters? Y/N" << endl;
+            cin >> answer;
+            if (answer.compare("Y") == 0){
+                clusters.writeLabels("c1_original_space_labels");
+                clustersNEW.writeLabels("c2_new_space_labels");
+                clustersClass.writeLabels("c3_classification_labels");
+                cout << "Run python labelgraph.py [label_file] for statistics" << endl;
+            }
 
             /* PROGRAM ENDS HERE */
             exec_time = (double)(clock() - tStart)/CLOCKS_PER_SEC;

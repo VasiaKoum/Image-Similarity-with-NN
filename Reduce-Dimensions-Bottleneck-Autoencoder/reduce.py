@@ -30,8 +30,8 @@ def main():
     train_X, valid_X, train_Y, valid_Y = reshape_dataset(pixels, numarray)
     print("Data ready in numpy array!\n")
     # Layers, Filter_size, Filters/Layer, Epochs, Batch_size, Latent_vector
-    parameters = [2, 3, 4, 1, 128, 10]
-    # parameters = input_parameters()
+    # parameters = [2, 3, 4, 1, 128, 10]
+    parameters = input_parameters()
     newparameter = [[] for i in range(len(parameters))]
     originparms = parameters.copy()
     oldparm = -1
@@ -47,14 +47,11 @@ def main():
         train_time = time.time()
         autoencoder_train = autoencoder.fit(train_X, train_Y, batch_size=parameters[4], epochs=parameters[3], verbose=1, validation_data=(valid_X, valid_Y))
         train_time = time.time() - train_time
-        # print(autoencoder.summary())
 
+        # Write in file the pixels from the first fitting-model
         if oldparm<0:
             write_outfile(pixels, numarray, autoencoder, dataset, output_data, parameters)
             write_outfile(None, None, autoencoder, queryset, output_query, parameters)
-
-        # READ FROM OUTPUT
-        # pixels, numarray = numpy_from_dataset(output_data, 4, True)
 
         # User choices:
         parameters, continue_flag, oldparm = user_choices(autoencoder, autoencoder_train, parameters, originparms, train_time, newparameter, oldparm, df, hypernames)

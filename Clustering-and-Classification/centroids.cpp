@@ -5,7 +5,7 @@
 #include "../LSH-and-TrueN-Approximation-factor/metrics.hpp"
 #include "centroids.hpp"
 #define PERCENT_CHANGED_POINTS 99
-#define MAX_LOOPS 1
+#define MAX_LOOPS 12
 #define RADIUS 8000
 #define W 40000
 
@@ -152,8 +152,8 @@ void Clusters::Clustering(char* output, string typecluster){
     Lloyds();
     tClustering = (double)(clock() - tStart)/CLOCKS_PER_SEC;
     cout << "Time of clustering: " << (double)tClustering << endl;
-    // Silhouette();
-    Output(output, tClustering, typecluster, ObjectiveFunction());
+    Silhouette();
+    Output(output, (double)tClustering, typecluster, ObjectiveFunction());
 }
 
 //Update
@@ -248,7 +248,7 @@ void Clusters::Clustering(vector<vector<int>> argimages, char* output, string ty
     int numclusters = Cntrds->getNumClusters();
     images = argimages;
     Update();
-    // Silhouette();
+    Silhouette();
     Output(output, 0, typecluster, Cntrds->minDist(CntrdsVectors));
 }
 
@@ -304,7 +304,7 @@ void Clusters::Silhouette(){
     }
     result = totalsum/points;
     snumbers.push_back(result);
-    cout << "Total Silhouette is: " << result;
+    cout << "Total Silhouette is: " << result << endl;
 }
 
 double Clusters::ObjectiveFunction(){
@@ -330,8 +330,8 @@ void Clusters::Output(char *output, double tClustering, string typecluster, doub
         }
 
         //Silhouette
+        outfile << "Silhouette: [";
         for(int i=0; i<snumbers.size(); i++){
-            outfile << "Silhouette: [";
             if(i!=snumbers.size()-1){
                 outfile << snumbers[i] << ", ";
             }
@@ -398,4 +398,37 @@ vector<vector<int>> readClassFile(char *n){
     }
     classesFile.close();
     return images;
+}
+
+void Clusters::writeLabels(string output){
+    // ../Datasets/train-labels-idx1-ubyte
+    // ../Datasets/t10k-labels-idx1-ubyte
+    string path;
+    cout << "\n***Please type the path for the correct labes of dataset" << endl;
+    cin >> path;
+
+    fstream LabelFile(path);
+    if(!LabelFile.is_open()){
+        cerr<<"Failed to open label file."<<endl;
+        return;
+    }
+    else{
+        unsigned int magicNumber = 0, numberOfItems = 0;
+        LabelFile.read((char*)&magicNumber, 4);
+        LabelFile.read((char*)&numberOfItems, 4);
+        vector<unsigned int> labels;
+        for(int i=0; i<numberOfItems; i++){
+            unsigned int label = 0;
+            LabelFile.read((char*)&label, 1);
+            labels.push_back(label);
+        }
+        ofstream outfile(output);
+        if (outfile.is_open()){
+            for(int i=0; i<images.size(); i++)
+                for(int j=0; j<images[i].size(); j++)
+                    outfile << images[i][j] << "\t\t" << i << "\t\t" <<labels[images[i][j]]  << endl;
+            outfile.close();
+        }
+        LabelFile.close();
+    }
 }
