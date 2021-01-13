@@ -225,7 +225,7 @@ int main(int argc, char** argv){
                     return 0;
                 }
                 clock_t lshAnnStart, lshRngStart, AnnTrueStart, RngTrueStart,AnnTrueRStart;
-                double lshAnnTime, lshRngTime, trueAnnTime, trueRngTime, trueAnnRTime;
+                double lshAnnTime = 0, lshRngTime = 0, trueAnnTime = 0, trueRngTime = 0, trueAnnRTime = 0;
                 double approx_lsh = 0, approx_reduced = 0, tempReduced = 0, tempLsh = 0;
                 for(int index=0; index<numberOfImages; index++){
                     // cout << index << endl;
@@ -280,9 +280,9 @@ int main(int argc, char** argv){
                         outputf << "distanceTrue: " << TrueNeighbors[TrueNeighbors.size()-1].getDist() << endl;
                     }  
                 }
-                outputf << "\ntReduced: " << trueAnnRTime/numberOfImages << endl;
-                outputf << "tLSH: " << lshAnnTime/numberOfImages << endl;
-                outputf << "tTrue: " << trueAnnTime/numberOfImages << endl;
+                outputf << "\ntReduced: " << (trueAnnRTime/numberOfImages)*1000 << endl;
+                outputf << "tLSH: " << (lshAnnTime/numberOfImages)*1000 << endl;
+                outputf << "tTrue: " << (trueAnnTime/numberOfImages)*1000 << endl;
                 outputf << "Approximation Factor LSH: " <<  (double)approx_lsh/(double)numberOfImages << endl;
                 outputf << "Approximation Factor Reduced: " << (double)approx_reduced/(double)numberOfImages<< endl;
                 

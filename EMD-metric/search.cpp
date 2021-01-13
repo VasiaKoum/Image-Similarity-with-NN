@@ -182,23 +182,24 @@ int main(int argc, char** argv){
                 str = str + " -q " +  q;
                 str = str + " -l1 " + l1;
                 str = str + " -l2 " + l2;
-                str = str + " -o " +  o;   
+                str = str + " -o " +  o + "2";
                 const char *command = str.c_str(); 
                 cout << command << endl; 
                 system(command); 
-
-                ofstream outputf(o);
+                string temp = "";
+                temp = temp + o + "1";
+                ofstream outputf(temp);
                 if (!outputf.is_open()){
                     cerr<<"Failed to open output data."<<endl;
                     return 0;
                 }
                 //MANHATTAN
                 clock_t AnnTrueStart;
-                double trueAnnTime;
+                double trueAnnTime = 0;
                 int success = 0;
                 double average_acc = 0;
 
-                // numberOfImages = 10;
+//                 numberOfImages = 10;
 
                 for(int index=0; index<numberOfImages; index++){
                     vector<Neighbor> TrueNeighbors;
@@ -226,10 +227,25 @@ int main(int argc, char** argv){
                 }
                 outputf << "Average Correct Search Results MANHATTAN: " << average_acc/(double)numberOfImages << endl;
                 cout << "Average Correct Search Results MANHATTAN: " << average_acc/(double)numberOfImages << endl;
-                outputf.close();
+
                 exec_time = (double)(clock() - tStart)/CLOCKS_PER_SEC;
                 cout << "MANHATTAN execution time is: "<< exec_time << endl;
                 outputf << "MANHATTAN execution time is: "<< exec_time << endl;
+                outputf.close();
+
+                string str2 = "cat ";
+                str2 = str2 + o + "1 ";
+                str2 = str2 + o + "2 ";
+                str2 = str2 + "> ";
+                str2 = str2 + o;
+                const char *command2 = str2.c_str();
+                system(command2);
+
+                string str3 = "rm ";
+                str3 = str3 + o + "1 ";
+                str3 = str3 + o + "2";
+                const char *command3 = str3.c_str();
+                system(command3);
 
                 cout << "\nYou want to execute the lsh with another queryfile? (Y/N)" << endl;
                 cin >> answer;
