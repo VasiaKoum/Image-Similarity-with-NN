@@ -64,7 +64,7 @@ qpixels, qnumarray = numpy_from_dataset(queryset, 4, False)
 dataset_labels, numarray_labels = numpy_from_dataset(datasetLabels, 2, False)
 queryset_labels, qnumarray_labels = numpy_from_dataset(querysetLabels, 2, False)
 
-clusterDim = 7 #cluster dimension n (nxn)
+clusterDim = int(input("Enter cluster's dimension size :")) #cluster dimension n (nxn)
 
 output = open(output_file, "a")
 dims = numarray[2]
@@ -76,14 +76,14 @@ sizeOfCluster = clusterDim*clusterDim
 num = dims/clusterDim
 
 correct_emd_results = 0
-average_time = 0
+sum_time = 0
 
 for qindex,query in enumerate(qpixels):
 
     # if qindex < 10:
     #     continue
-    if qindex == 10:
-        break
+    # if qindex == 10:
+    #     break
 
     # Consumer
     sum_consumer = np.sum(query)
@@ -126,8 +126,8 @@ for qindex,query in enumerate(qpixels):
     results = []
     for index,image in enumerate(pixels):
 
-        if index == 100:
-            break
+        # if index == 100:
+        #     break
 
         sum_producer = np.sum(image)
         sum_producer_100 = 0
@@ -188,12 +188,12 @@ for qindex,query in enumerate(qpixels):
 
     correct_emd_results = correct_emd_results + (success/10)
     query_time = time.time() - query_start_time
-    average_time = average_time + query_time
+    sum_time = sum_time + query_time
     # print("query: ", qindex, " nearest neighbour image: ",results[0][0], " with distance: ",results[0][1], dataset_labels[results[0][0]][0]  , queryset_labels[qindex][0], file=output)
 
-print("Average Correct Search Results EMD: ", correct_emd_results/10)
-print("Average Query Time EMD: ", average_time/10)
-print("Average Correct Search Results EMD: ", correct_emd_results/10, file=output)
-print("Average Query Time EMD: ", average_time/10, file=output)
+print("Average Correct Search Results EMD: ", correct_emd_results/qnumarray[1])
+print("EMD execution time is: ", sum_time)
+print("Average Correct Search Results EMD: ", correct_emd_results/qnumarray[1], file=output)
+print("EMD execution time is: ", sum_time, file=output)
 output.close()
 

@@ -10,7 +10,6 @@
 #include "Algorithms.hpp"
 #include "metrics.hpp"
 #define SWAP_INT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
-// ./lsh -d ../Datasets/train-images-idx3-ubyte -i ../Datasets/reduced_dims_trainset -q ../Datasets/t10k-images-idx3-ubyte -s ../Datasets/reduced_dims_testset -k 3 -L 4 -o fileoutlsh
 using namespace std;
 
 int main(int argc, char** argv){
@@ -71,7 +70,7 @@ int main(int argc, char** argv){
             numberOfRows = SWAP_INT32(numberOfRows);
             numberOfColumns = SWAP_INT32(numberOfColumns);
 
-            numberOfImages = 100;
+            // numberOfImages = 100;
 
             Dataset trainSet(magicNumber, numberOfImages, numberOfColumns, numberOfRows);
             unsigned short* temp = trainSet.imageAt(0);
@@ -113,7 +112,7 @@ int main(int argc, char** argv){
             trainLabelsInput.close();
             
             img = numberOfImages;
-            string queryfile, outputfile, answer;
+            string queryfile, outputfile, answer, querylabelfile;
             bool termination = false;
 
             while(!termination){
@@ -199,7 +198,7 @@ int main(int argc, char** argv){
                 int success = 0;
                 double average_acc = 0;
 
-                numberOfImages = 10;
+                // numberOfImages = 10;
 
                 for(int index=0; index<numberOfImages; index++){
                     vector<Neighbor> TrueNeighbors;
@@ -230,6 +229,7 @@ int main(int argc, char** argv){
                 outputf.close();
                 exec_time = (double)(clock() - tStart)/CLOCKS_PER_SEC;
                 cout << "MANHATTAN execution time is: "<< exec_time << endl;
+                outputf << "MANHATTAN execution time is: "<< exec_time << endl;
 
                 cout << "\nYou want to execute the lsh with another queryfile? (Y/N)" << endl;
                 cin >> answer;
@@ -237,6 +237,11 @@ int main(int argc, char** argv){
                     cout << "Please type the path for queryfile:" << endl;
                     cin >> queryfile;
                     q = &queryfile[0];
+
+                    cout << "Please type the path for queries's labels:" << endl;
+                    cin >> querylabelfile;
+                    l2 = &querylabelfile[0];
+
                     cout << "Please type the path for outputfile:" << endl;
                     cin >> outputfile;
                     o = &outputfile[0];
