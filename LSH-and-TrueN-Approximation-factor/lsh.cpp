@@ -264,7 +264,7 @@ int main(int argc, char** argv){
                     int ANNsize = ANNneighbors.size();
                     int TrueSize = TrueNeighbors.size();
                     int TrueRsize = True_Reduced_Neighbors.size();
-                    outputf << "Query: " << index << endl;
+                    outputf << "\nQuery: " << index << endl;
                 
                     if((TrueRsize) > 0){
                         outputf << "Nearest neighbor Reduced: " << True_Reduced_Neighbors[True_Reduced_Neighbors.size()-1].getIndex() << endl;
