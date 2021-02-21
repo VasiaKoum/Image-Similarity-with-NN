@@ -242,7 +242,7 @@ int main(int argc, char** argv){
 
                     AnnTrueRStart = clock();
                     trueDistanceWithNeighbors(True_Reduced_Neighbors, querySetR.imageAt(index), &trainSetR,trainSetR.getNumberOfPixels());
-                    trueAnnRTime = trueAnnRTime + (double)(clock() - AnnTrueStart)/CLOCKS_PER_SEC;
+                    trueAnnRTime = trueAnnRTime + (double)(clock() - AnnTrueRStart)/CLOCKS_PER_SEC;
 
                     ///////////////////////////////////////////
 
